@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Omada syslog - tallies scatter</title>
+<style>
+  html,body{margin:0;height:100%;background:#14171c;color:#d7dce3;font:13px system-ui,"Segoe UI",sans-serif}
+  body{display:flex;flex-direction:column}
+  #bar{flex:none;padding:8px 10px;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;border-bottom:1px solid #2a2f3a;background:#191d24}
+  .ctl{display:flex;flex-direction:column;gap:2px}
+  .ctl label{font-size:10px;color:#8a93a3;text-transform:uppercase;letter-spacing:.05em}
+  select,input{background:#222733;color:#e6ebf2;border:1px solid #343b4a;border-radius:4px;padding:3px 6px;font:12px system-ui}
+  input[type="datetime-local"]{color-scheme:dark;width:152px}
+  #btnGo{background:#2b4a6f;color:#e6ebf2;border:1px solid #3d5f8f;border-radius:4px;padding:4px 12px;cursor:pointer}
+  #btnGo:hover{background:#35608f}
+  #status{margin-left:auto;color:#8a93a3;font-size:12px;padding-bottom:4px;max-width:440px;text-align:right}
+  #wrap{flex:1 1 auto;position:relative;min-height:0}
+  #plot{position:absolute;inset:0;cursor:crosshair}
+  #tip{position:absolute;pointer-events:none;background:#1c212b;border:1px solid #3a4254;border-radius:6px;padding:7px 10px;font-size:12px;display:none;max-width:440px;box-shadow:0 4px 14px rgba(0,0,0,.5);line-height:1.5;z-index:5}
+  #tip b{color:#7fd0ff}
+  #detail{position:fixed;top:0;right:0;bottom:0;width:440px;background:#161a21;border-left:1px solid #2a2f3a;padding:14px;display:none;overflow:auto;z-index:10}
+  #detail pre{white-space:pre-wrap;word-break:break-all;font-size:11.5px;color:#aeb7c6}
+  #detail button{position:absolute;top:8px;right:10px;background:#222733;color:#d7dce3;border:1px solid #343b4a;border-radius:4px;padding:2px 9px;cursor:pointer}
+  #detail h3{margin:0 0 10px;font-size:13px;color:#7fd0ff}
+</style>
+</head>
+<body>
+<div id="bar">
+  <div class="ctl"><label>X axis</label><select id="selX"></select></div>
+  <div class="ctl"><label>Y axis</label><select id="selY"></select></div>
+  <div class="ctl"><label>Y scale</label><select id="selYS"><option value="linear">linear</option><option value="log">log</option></select></div>
+  <div class="ctl"><label>flip Y</label><input id="chkFlipY" type="checkbox" style="margin-top:4px"></div>
+  <div class="ctl"><label>Color</label><select id="selC"></select></div>
+  <div class="ctl"><label>Size</label><select id="selS"></select></div>
+  <div class="ctl"><label>src contains</label><input id="fSrc" size="10" placeholder="192.0.2.10"></div>
+  <div class="ctl"><label>dst contains</label><input id="fDst" size="10" placeholder="198.51.100.20"></div>
+  <div class="ctl"><label>min count</label><input id="fMin" type="number" value="0" min="0" style="width:64px"></div>
+  <div class="ctl"><label>flow/msg</label><select id="fType"><option value="both">both</option><option value="flow">flow</option><option value="msg">msg</option></select></div>
+  <div class="ctl"><label>dataset</label><select id="fDs"><option value="both">tallies + raw</option><option value="tally">tallies</option><option value="raw">raw</option></select></div>
+  <div class="ctl"><label>direction</label><select id="fDir"><option value="all">all</option><option value="internal">internal</option><option value="outbound">outbound</option><option value="inbound">inbound</option><option value="other">other</option></select></div>
+  <div class="ctl"><label>from</label><input id="fFrom" type="datetime-local"></div>
+  <div class="ctl"><label>to</label><input id="fTo" type="datetime-local"></div>
+  <div class="ctl"><label>point cap</label><input id="fCap" type="number" value="40000" style="width:76px"></div>
+  <div class="ctl"><label>auto 30s</label><input id="chkAuto" type="checkbox" checked style="margin-top:4px"></div>
+  <button id="btnGo" onclick="refresh(true)">refresh</button>
+  <div id="status">loading...</div>
+</div>
+<div id="wrap"><canvas id="plot"></canvas><div id="tip"></div></div>
+<div id="detail"><button onclick="document.getElementById('detail').style.display='none'">close</button><h3>entry</h3><pre id="detailBody"></pre></div>
+<script>
+"use strict";
+var AXES = ["ts","first","last","count","src","dst","dpt","proto","sev","type","ds","dir"];
+var COLORVARS = ["","src","dst","dpt","proto","sev","type","ds","dir","count"];
+var SIZEVARS = ["const","count","occ"];
+var LABEL = {ts:"time",first:"first seen",last:"last seen",count:"count",src:"src",dst:"dst",
+  dpt:"dest port",proto:"proto",sev:"severity",type:"flow/msg",ds:"dataset",
+  dir:"direction","":"none",const:"constant",occ:"# occurrences"};
+var TIMEK = {ts:1,first:1,last:1};
+var SEVN = ["emerg","alert","crit","err","warning","notice","info","debug"];
+var PROTO = {1:"icmp",6:"tcp",17:"udp"};
+/* 16 colors at golden-angle hue spacing with alternating lightness/saturation,
+   then assigned by frequency rank in ensureColors(): the biggest
+   categories always get distinct colors, spread evenly across the spectrum. */
+var PAL = [];
+(function(){
+  for (var i = 0; i < 16; i++){
+    var hue = Math.round((i * 137.508) % 360);
+    var l = (i % 2 === 0) ? 62 : 50;
+    var s = (i % 4 < 2) ? 74 : 60;
+    PAL.push("hsl(" + hue + "," + s + "%," + l + "%)");
+  }
+})();
+
+function $(id){ return document.getElementById(id); }
+function protoName(p){ return PROTO[p] || ((p === null || p === undefined) ? "-" : String(p)); }
+function sevName(s){ return (s === null || s === undefined) ? "-" : (SEVN[s] || String(s)); }
+function trunc(s, n){ s = String(s); return s.length > n ? s.slice(0, n - 1) + "\u2026" : s; }
+function escapeHtml(s){
+  return String(s).replace(/[&<>]/g, function(c){
+    return "&#" + c.charCodeAt(0) + ";";
+  });
+}
+
+function fill(sel, vars, def){
+  var s = $(sel);
+  for (var i = 0; i < vars.length; i++){
+    var o = document.createElement("option");
+    o.value = vars[i]; o.textContent = LABEL[vars[i]] || vars[i];
+    if (vars[i] === def) o.selected = true;
+    s.appendChild(o);
+  }
+}
+fill("selX", AXES, "ts");
+fill("selY", AXES, "dpt");
+fill("selC", COLORVARS, "src");
+fill("selS", SIZEVARS, "count");
+
+var data = {entries:[], raw:[], meta:{}, generated:""};
+var allPoints = [], points = [], drawn = [];
+var capped = false;
+var countMin = 0, countMax = 1, occMax = 1;
+/* polish: stable visuals across auto-refresh -
+   domainCache: grow-only axis ranges (time slides, numeric only extends)
+   laneCache:   categorical lanes append new values, never re-sort */
+var domainCache = {};
+var laneCache = {};
+function clearFitCaches(){ domainCache = {}; laneCache = {}; }
+
+function buildAllPoints(){
+  var pts = [], i, k, ts;
+  for (i = 0; i < data.entries.length; i++){
+    var e = data.entries[i];
+    var stamps = {};
+    if (e.first) stamps[e.first] = 1;
+    if (e.last)  stamps[e.last] = 1;
+    var occ = e.occurrences || [];
+    for (k = 0; k < occ.length; k++) stamps[occ[k]] = 1;
+    for (ts in stamps){
+      if (e.type === "flow"){
+        pts.push({ds:"tally", ts:ts, first:e.first, last:e.last, count:e.count||0,
+          src:e.src, dst:e.dst, proto:e.proto, dpt:(e.dpt === undefined ? null : e.dpt),
+          sev:null, type:"flow", occ:occ.length, dir:(e.dir || "other"),
+          label:e.src+" -> "+e.dst+" "+protoName(e.proto)+"/"+((e.dpt == null) ? "-" : e.dpt), ref:e});
+      } else {
+        pts.push({ds:"tally", ts:ts, first:e.first, last:e.last, count:e.count||0,
+          src:e.from, dst:null, proto:null, dpt:null,
+          sev:(e.sev === undefined ? null : e.sev), type:"msg", occ:occ.length,
+          dir:(e.dir || "other"), label:trunc(e.template || "msg", 80), ref:e});
+      }
+    }
+  }
+  for (i = 0; i < data.raw.length; i++){
+    var r = data.raw[i];
+    pts.push({ds:"raw", ts:r.ts, first:null, last:null, count:1,
+      src:r.src, dst:r.dst, proto:r.proto, dpt:r.dpt,
+      sev:(r.sev === undefined ? null : r.sev), type:(r.type || "flow"), occ:0,
+      dir:(r.dir || "other"), label:r.label, ref:r});
+  }
+  return pts;
+}
+
+function applyFilters(){
+  var fSrc = $("fSrc").value.trim(), fDst = $("fDst").value.trim();
+  var fMin = parseInt($("fMin").value, 10) || 0;
+  var fType = $("fType").value, fDs = $("fDs").value, fDir = $("fDir").value;
+  var fFrom = $("fFrom").value, fTo = $("fTo").value;
+  var cap = parseInt($("fCap").value, 10) || 40000;
+  var out = [];
+  for (var i = 0; i < allPoints.length; i++){
+    var p = allPoints[i];
+    if (fSrc && String(p.src || "").indexOf(fSrc) < 0) continue;
+    if (fDst && String(p.dst || "").indexOf(fDst) < 0) continue;
+    if (p.count < fMin) continue;
+    if (fType !== "both" && p.type !== fType) continue;
+    if (fDs !== "both" && p.ds !== fDs) continue;
+    if (fDir !== "all" && p.dir !== fDir) continue;
+    if (fFrom && p.ts < fFrom) continue;
+    if (fTo && p.ts > fTo) continue;
+    out.push(p);
+  }
+  capped = out.length > cap;
+  if (capped){ out.sort(function(a,b){ return b.count - a.count; }); out = out.slice(0, cap); }
+  return out;
+}
+
+function computeRanges(){
+  countMin = Infinity; countMax = -Infinity; occMax = 1;
+  for (var i = 0; i < points.length; i++){
+    var c = points[i].count;
+    if (c < countMin) countMin = c;
+    if (c > countMax) countMax = c;
+    if (points[i].occ > occMax) occMax = points[i].occ;
+  }
+  if (countMin === Infinity){ countMin = 0; countMax = 1; }
+  if (countMax <= countMin) countMax = countMin + 1;
+}
+
+function ipKey(v){
+  var m = String(v).match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if (!m) return null;
+  return ((((+m[1] << 24) >>> 0) + (+m[2] << 16) + (+m[3] << 8) + +m[4]) >>> 0);
+}
+function uniqVals(v, pts){
+  var seen = {}, out = [], i, x, key;
+  for (i = 0; i < pts.length; i++){
+    x = pts[i][v];
+    if (x === null || x === undefined) continue;
+    key = typeof x + ":" + x;
+    if (!seen[key]){ seen[key] = 1; out.push(x); }
+  }
+  return out;
+}
+function sortVals(v, u){
+  if (v === "dpt" || v === "proto" || v === "sev"){
+    u.sort(function(a,b){ return a - b; });
+  } else if (v === "src" || v === "dst"){
+    u.sort(function(a,b){
+      var A = ipKey(a), B = ipKey(b);
+      if (A !== null && B !== null) return A - B;
+      return String(a) < String(b) ? -1 : (String(a) > String(b) ? 1 : 0);
+    });
+  } else if (v === "dir"){
+    var ord = {internal:0, outbound:1, inbound:2, other:3};
+    u.sort(function(a,b){
+      var ra = (ord[a] === undefined) ? 9 : ord[a];
+      var rb = (ord[b] === undefined) ? 9 : ord[b];
+      return ra - rb;
+    });
+  } else {
+    u.sort();
+  }
+  return u;
+}
+
+function fmtNum(v){
+  if (v >= 1e9) return (v / 1e9).toFixed(1) + "B";
+  if (v >= 1e6) return (v / 1e6).toFixed(1) + "M";
+  if (v >= 1000) return (v / 1000).toFixed(1) + "k";
+  return String(Math.round(v));
+}
+
+function fmtTick(t){
+  var d = new Date(t);
+  function p2(n){ return String(n).padStart(2, "0"); }
+  return p2(d.getMonth() + 1) + "-" + p2(d.getDate()) + " " + p2(d.getHours()) + ":" + p2(d.getMinutes());
+}
+
+function makeScale(v, pts, p0, p1, logMode, cacheKey){
+  var i, x;
+  if (TIMEK[v]){
+    var lo = Infinity, hi = -Infinity;
+    for (i = 0; i < pts.length; i++){
+      x = pts[i][v]; if (x == null) continue;
+      var t = Date.parse(x);
+      if (isNaN(t)) continue;
+      if (t < lo) lo = t;
+      if (t > hi) hi = t;
+    }
+    if (lo > hi) return null;
+    var cached = domainCache[cacheKey];
+    if (cached){
+      if (hi > cached.hi){
+        var dur = cached.hi - cached.lo;   // slide the window, keep its width
+        cached.hi = hi;
+        cached.lo = hi - dur;
+      }
+      lo = cached.lo; hi = cached.hi;
+    } else {
+      if (hi === lo){ lo -= 3600000; hi += 3600000; }
+      domainCache[cacheKey] = { lo: lo, hi: hi };
+    }
+    var span = hi - lo;
+    var n = Math.max(2, Math.min(7, Math.floor((p1 - p0) / 100)));
+    var ticks = [];
+    for (i = 0; i < n; i++){
+      ticks.push({ x: p0 + (p1 - p0) * i / (n - 1), label: fmtTick(lo + span * i / (n - 1)) });
+    }
+    return { pos: function(val){ var t = Date.parse(val); return isNaN(t) ? null : p0 + (t - lo) / span * (p1 - p0); },
+             ticks: ticks, kind: "time" };
+  }
+  var isNum = (v === "count");
+  if (v === "dpt" && uniqVals(v, pts).length > 60) isNum = true;
+  if (isNum){
+    var nlo = Infinity, nhi = -Infinity;
+    for (i = 0; i < pts.length; i++){
+      x = pts[i][v]; if (x === null || x === undefined) continue;
+      var fx = +x;
+      if (isNaN(fx)) continue;
+      if (fx < nlo) nlo = fx;
+      if (fx > nhi) nhi = fx;
+    }
+    if (nlo > nhi) return null;
+    var cachedN = domainCache[cacheKey];
+    if (cachedN){
+      if (nlo < cachedN.lo) cachedN.lo = nlo;    // grow-only: never shrink on auto-refresh
+      if (nhi > cachedN.hi) cachedN.hi = nhi;
+      nlo = cachedN.lo; nhi = cachedN.hi;
+    } else {
+      if (nhi === nlo){ nlo -= 1; nhi += 1; }
+      domainCache[cacheKey] = { lo: nlo, hi: nhi };
+    }
+    if (logMode && nlo > 0){
+      var llo = Math.log(nlo), lhi = Math.log(nhi);
+      if (lhi <= llo) lhi = llo + 1;
+      var lspan = lhi - llo;
+      var lt = Math.max(2, Math.min(7, Math.floor((p1 - p0) / 90)));
+      var ltk = [];
+      for (i = 0; i < lt; i++){
+        ltk.push({ x: p0 + (p1 - p0) * i / (lt - 1), label: fmtNum(Math.exp(llo + lspan * i / (lt - 1))) });
+      }
+      return { pos: function(val){ var f = +val; if (isNaN(f) || f <= 0) return null; return p0 + (Math.log(f) - llo) / lspan * (p1 - p0); },
+               ticks: ltk, kind: "log" };
+    }
+    var nspan = nhi - nlo;
+    var nt = Math.max(2, Math.min(7, Math.floor((p1 - p0) / 90)));
+    var ntk = [];
+    for (i = 0; i < nt; i++){
+      ntk.push({ x: p0 + (p1 - p0) * i / (nt - 1), label: fmtNum(nlo + nspan * i / (nt - 1)) });
+    }
+    return { pos: function(val){ var f = +val; return isNaN(f) ? null : p0 + (f - nlo) / nspan * (p1 - p0); },
+             ticks: ntk, kind: "num" };
+  }
+  var fresh = sortVals(v, uniqVals(v, pts));
+  var u = laneCache[cacheKey];
+  if (u){
+    var have = {};
+    for (i = 0; i < u.length; i++) have[typeof u[i] + ":" + u[i]] = 1;
+    for (i = 0; i < fresh.length; i++){
+      var fk = typeof fresh[i] + ":" + fresh[i];
+      if (!have[fk]){ u.push(fresh[i]); have[fk] = 1; }   // append: lanes never shift
+    }
+  } else {
+    u = fresh;
+  }
+  if (u.length) laneCache[cacheKey] = u;
+  if (!u.length) return null;
+  var idx = {};
+  for (i = 0; i < u.length; i++) idx[typeof u[i] + ":" + u[i]] = i;
+  var lane = (p1 - p0) / u.length;
+  var lblOf = function(val){
+    if (v === "proto") return protoName(val);
+    if (v === "sev") return sevName(val);
+    return String(val);
+  };
+  var ticks = [];
+  var step = Math.max(1, Math.ceil(u.length * 16 / (p1 - p0)));
+  for (i = 0; i < u.length; i += step){
+    ticks.push({ x: p0 + lane * (i + 0.5), label: lblOf(u[i]) });
+  }
+  return { pos: function(val){
+             var i2 = idx[typeof val + ":" + val];
+             return (i2 === undefined) ? null : p0 + lane * (i2 + 0.5);
+           },
+           ticks: ticks, kind: "cat", n: u.length };
+}
+
+function hashStr(s){ var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; }
+function colorKey(v, x){
+  if (v === "proto") return protoName(x);
+  if (v === "sev") return sevName(x);
+  return String(x);
+}
+/* Sticky color assignment: seeded by frequency rank when first drawn (the
+   largest categories take distinct palette slots), then FROZEN - the same
+   category keeps its color across refreshes. New categories take the lowest
+   free slot; with all 16 taken they wrap (a page reload re-seeds). */
+var colorRank = {};
+function ensureColors(){
+  var v = $("selC").value;
+  var prefix = v + "|";
+  for (var k in colorRank){ if (k.indexOf(prefix) !== 0) delete colorRank[k]; }
+  if (!v || v === "count") return;
+  var assigned = false, k2;
+  for (k2 in colorRank){ assigned = true; break; }
+  if (!assigned){
+    var allFreq = {}, i2, x2, ck2;
+    for (i2 = 0; i2 < points.length; i2++){
+      x2 = points[i2][v];
+      if (x2 === null || x2 === undefined) continue;
+      ck2 = colorKey(v, x2);
+      allFreq[ck2] = (allFreq[ck2] || 0) + 1;
+    }
+    var keys = Object.keys(allFreq).sort(function(a,b){ return allFreq[b] - allFreq[a]; });
+    for (i2 = 0; i2 < keys.length; i2++) colorRank[prefix + keys[i2]] = i2;
+    return;
+  }
+  var used = {};
+  for (k2 in colorRank) used[colorRank[k2]] = 1;
+  var freq = {}, i, x, key;
+  for (i = 0; i < points.length; i++){
+    x = points[i][v];
+    if (x === null || x === undefined) continue;
+    key = colorKey(v, x);
+    if (colorRank[prefix + key] === undefined) freq[key] = (freq[key] || 0) + 1;
+  }
+  var newKeys = Object.keys(freq).sort(function(a,b){ return freq[b] - freq[a]; });
+  for (i = 0; i < newKeys.length; i++){
+    var s2 = 0;
+    while (used[s2]) s2++;
+    colorRank[prefix + newKeys[i]] = s2;
+    used[s2] = 1;
+  }
+}
+function catColor(v, x){
+  var key = colorKey(v, x);
+  var r = colorRank[$("selC").value + "|" + key];
+  return PAL[(r === undefined ? hashStr(key) : r) % PAL.length];
+}
+/* count gradient on a log scale so mid-size counts spread evenly too */
+function gradT(c){
+  var a = Math.log((countMin || 0) + 1), b = Math.log((countMax || 1) + 1);
+  if (b <= a) return 0;
+  return (Math.log(c + 1) - a) / (b - a);
+}
+function gradColor(t){
+  var hue = 205 * (1 - Math.max(0, Math.min(1, t)));
+  return "hsl(" + hue + ",75%,62%)";
+}
+function colorOf(p){
+  var v = $("selC").value;
+  if (!v) return "#9ab0c8";
+  if (v === "count") return gradColor(gradT(p.count));
+  var x = p[v];
+  if (x === null || x === undefined) return "#5a6373";
+  return catColor(v, x);
+}
+function sizeOf(p){
+  var v = $("selS").value;
+  if (v === "const") return 3.2;
+  if (v === "count") return 2 + 12 * Math.sqrt((p.count - countMin) / ((countMax - countMin) || 1));
+  return 2 + 12 * Math.sqrt(p.occ / (occMax || 1));
+}
+
+var canvas = $("plot"), wrap = $("wrap"), tip = $("tip");
+var ctx = canvas.getContext("2d");
+var dpr = window.devicePixelRatio || 1;
+var MX0 = 78, MXR = 18, MTOP = 16, MBOT = 66;
+
+function fit(){
+  var w = wrap.clientWidth, h = wrap.clientHeight;
+  canvas.width = Math.max(10, Math.round(w * dpr));
+  canvas.height = Math.max(10, Math.round(h * dpr));
+  canvas.style.width = w + "px";
+  canvas.style.height = h + "px";
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  draw();
+}
+
+function draw(){
+  var W = wrap.clientWidth, H = wrap.clientHeight;
+  ctx.clearRect(0, 0, W, H);
+  var x0 = MX0, x1 = W - MXR, y0 = MTOP, y1 = H - MBOT;
+  var Xv = $("selX").value, Yv = $("selY").value;
+  var flip = $("chkFlipY").checked;
+  var sx = makeScale(Xv, points, x0, x1, false, "x|" + Xv);
+  var sy = makeScale(Yv, points, flip ? y0 : y1, flip ? y1 : y0, $("selYS").value === "log", "y|" + Yv);
+  drawn = [];
+  if (!sx || !sy || !points.length){
+    ctx.fillStyle = "#6b7686"; ctx.font = "14px system-ui"; ctx.textAlign = "center";
+    ctx.fillText(points.length ? "no plottable points for this X/Y selection" : "no points match the filters", W / 2, H / 2);
+    updStatus();
+    return;
+  }
+  var i, t;
+  ctx.strokeStyle = "#232a36"; ctx.fillStyle = "#8a93a3"; ctx.font = "11px system-ui";
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  for (i = 0; i < sx.ticks.length; i++){
+    t = sx.ticks[i];
+    ctx.beginPath(); ctx.moveTo(t.x, y0); ctx.lineTo(t.x, y1); ctx.stroke();
+    ctx.fillText(trunc(t.label, 14), t.x, y1 + 14);
+  }
+  ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  for (i = 0; i < sy.ticks.length; i++){
+    t = sy.ticks[i];
+    ctx.beginPath(); ctx.moveTo(x0, t.x); ctx.lineTo(x1, t.x); ctx.stroke();
+    ctx.fillText(trunc(t.label, 14), x0 - 6, t.x);
+  }
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = "#aeb7c6"; ctx.textAlign = "left";
+  ctx.fillText("X: " + (LABEL[Xv] || Xv), x0, H - 40);
+  ctx.save(); ctx.translate(14, y1); ctx.rotate(-Math.PI / 2);
+  ctx.fillText("Y: " + (LABEL[Yv] || Yv), 0, 0);
+  ctx.restore();
+
+  for (i = 0; i < points.length; i++){
+    var p = points[i];
+    var vx = p[Xv], vy = p[Yv];
+    if (vx === null || vx === undefined || vy === null || vy === undefined) continue;
+    var px = sx.pos(vx), py = sy.pos(vy);
+    if (px === null || py === null) continue;
+    if (px < x0 - 4 || px > x1 + 4 || py < y0 - 4 || py > y1 + 4) continue;
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = colorOf(p);
+    ctx.beginPath(); ctx.arc(px, py, sizeOf(p), 0, 6.2832); ctx.fill();
+    drawn.push({ p: p, x: px, y: py });
+  }
+  ctx.globalAlpha = 1;
+  drawLegend(x1);
+  updStatus();
+}
+
+function drawLegend(x1){
+  var v = $("selC").value;
+  var y = 24, i;
+  ctx.font = "11px system-ui"; ctx.textAlign = "left";
+  if (!v){
+    var sv = $("selS").value;
+    if (sv === "const") return;
+    ctx.fillStyle = "#aeb7c6"; ctx.fillText("size: " + LABEL[sv], x1 - 150, y);
+    var vals = (sv === "count") ? [countMin, (countMin + countMax) / 2, countMax] : [0, occMax / 2, occMax];
+    for (i = 0; i < 3; i++){
+      var fake = (sv === "count") ? {count: vals[i], occ: 0} : {count: 0, occ: vals[i]};
+      ctx.globalAlpha = 0.6; ctx.fillStyle = "#9ab0c8";
+      ctx.beginPath(); ctx.arc(x1 - 138 + i * 46, 42, sizeOf(fake), 0, 6.2832); ctx.fill();
+      ctx.globalAlpha = 1; ctx.fillStyle = "#8a93a3";
+      ctx.fillText(String(Math.round(vals[i])), x1 - 148 + i * 46, 62);
+    }
+    return;
+  }
+  if (v === "count"){
+    var grd = ctx.createLinearGradient(x1 - 150, 0, x1 - 10, 0);
+    grd.addColorStop(0, gradColor(0)); grd.addColorStop(1, gradColor(1));
+    ctx.fillStyle = grd; ctx.fillRect(x1 - 150, y, 140, 10);
+    ctx.fillStyle = "#8a93a3";
+    ctx.fillText(String(countMin), x1 - 150, y + 24);
+    ctx.textAlign = "right";
+    ctx.fillText(String(countMax), x1 - 10, y + 24);
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#aeb7c6"; ctx.fillText("count", x1 - 150, y - 6);
+    return;
+  }
+  var freq = {}, x, key;
+  for (i = 0; i < points.length; i++){
+    x = points[i][v];
+    if (x === null || x === undefined) continue;
+    key = colorKey(v, x);
+    freq[key] = (freq[key] || 0) + 1;
+  }
+  var keys = Object.keys(freq).sort(function(a,b){ return freq[b] - freq[a]; });
+  ctx.fillStyle = "#aeb7c6"; ctx.fillText(LABEL[v] || v, x1 - 150, y - 6);
+  var shown = Math.min(12, keys.length);
+  for (i = 0; i < shown; i++){
+    var yy = y + 12 + i * 15;
+    ctx.fillStyle = catColor(v, keys[i]);
+    ctx.fillRect(x1 - 150, yy - 8, 10, 10);
+    ctx.fillStyle = "#8a93a3";
+    ctx.fillText(trunc(keys[i], 20) + " (" + freq[keys[i]] + ")", x1 - 134, yy);
+  }
+  if (keys.length > shown){
+    ctx.fillStyle = "#6b7686";
+    ctx.fillText("+" + (keys.length - shown) + " more", x1 - 150, y + 12 + shown * 15);
+  }
+}
+
+function updStatus(){
+  $("status").textContent = drawn.length + " pts" + (capped ? " (capped)" : "") +
+    " | tallies " + data.entries.length + " entries, raw " + data.raw.length + " recs";
+}
+
+function hitTest(mx, my){
+  var best = null, bd = 100, i, d, dx, dy, dist;
+  for (i = 0; i < drawn.length; i++){
+    d = drawn[i];
+    dx = d.x - mx; dy = d.y - my;
+    dist = dx * dx + dy * dy;
+    if (dist < bd){ bd = dist; best = d; }
+  }
+  return (bd <= 81) ? best : null;
+}
+
+canvas.addEventListener("mousemove", function(ev){
+  var h = hitTest(ev.offsetX, ev.offsetY);
+  if (!h){ tip.style.display = "none"; return; }
+  var p = h.p;
+  tip.innerHTML = "<b>" + escapeHtml(p.label) + "</b><br>" +
+    escapeHtml(p.type) + " | " + escapeHtml(p.ds) + " | count " + p.count +
+    " | sev " + sevName(p.sev) + " | " + escapeHtml(p.dir || "other") + "<br>" +
+    "src " + escapeHtml(p.src || "-") + " &rarr; dst " + escapeHtml(p.dst || "-") +
+    " " + protoName(p.proto) + "/" + ((p.dpt == null) ? "-" : p.dpt) + "<br>" +
+    "at " + escapeHtml(String(p.ts).slice(0, 23)) +
+    (p.first ? "<br>first " + escapeHtml(String(p.first).slice(0, 19)) +
+               " | last " + escapeHtml(String(p.last).slice(0, 19)) : "");
+  tip.style.display = "block";
+  var w = wrap.clientWidth;
+  var x = ev.offsetX + 14, y = ev.offsetY + 10;
+  if (x + tip.offsetWidth > w - 8) x = ev.offsetX - tip.offsetWidth - 12;
+  tip.style.left = x + "px";
+  tip.style.top = y + "px";
+});
+canvas.addEventListener("mouseleave", function(){ tip.style.display = "none"; });
+canvas.addEventListener("click", function(ev){
+  var h = hitTest(ev.offsetX, ev.offsetY);
+  if (!h) return;
+  $("detailBody").textContent = JSON.stringify(h.p.ref, null, 2);
+  $("detail").style.display = "block";
+});
+
+function redrawFromPoints(){
+  points = applyFilters();
+  computeRanges();
+  ensureColors();
+  draw();
+}
+
+var fetching = false;
+function refresh(fitAxes){
+  if (fetching) return;
+  fetching = true;
+  fetch("/api/data").then(function(r){ return r.json(); }).then(function(j){
+    fetching = false;
+    data = j;
+    allPoints = buildAllPoints();
+    if (fitAxes) clearFitCaches();   // explicit refresh: re-fit; auto: keep ranges stable
+    redrawFromPoints();
+    tip.style.display = "none";      // data moved under the cursor
+  }).catch(function(e){
+    fetching = false;
+    $("status").textContent = "load failed: " + e;
+  });
+}
+
+function controlChange(){ clearFitCaches(); redrawFromPoints(); }
+var deb = null;
+["fSrc", "fDst", "fCap"].forEach(function(id){
+  $(id).addEventListener("input", function(){
+    clearTimeout(deb);
+    deb = setTimeout(controlChange, 350);
+  });
+});
+["selX", "selY", "selC", "selS", "fMin", "fType", "fDs", "fDir", "fFrom", "fTo",
+ "selYS", "chkFlipY"].forEach(function(id){
+  $(id).addEventListener("change", controlChange);
+});
+window.addEventListener("resize", fit);
+setInterval(function(){
+  if ($("chkAuto").checked && !document.hidden) refresh(false);
+}, 30000);
+
+fit();
+refresh(true);
+</script>
+</body>
+</html>

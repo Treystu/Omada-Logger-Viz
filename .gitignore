@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# runtime data (never commit logs or tallies)
+*.log
+*.log.*
+condensed.json
+.trim-*.tmp
+.cond-*.tmp
+.watchdog-restart
+
+# OS / editor
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# local launch kit (posts, screenshot tooling, sanitization report)
+launch/
