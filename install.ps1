@@ -19,7 +19,8 @@ Usage (self-elevates; UAC prompt will appear if not already admin):
 Log data lives in %LOCALAPPDATA%\OmadaSyslog (kept on uninstall).
 #>
 param(
-    [string]$TaskArgs = ''
+    [string]$TaskArgs = '',
+    [switch]$VizBoot
 )
 
 $ErrorActionPreference = 'Stop'
@@ -33,6 +34,7 @@ $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIden
 if (-not $isAdmin) {
     $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath)
     if ($TaskArgs) { $argList += @('-TaskArgs', $TaskArgs) }
+    if ($VizBoot) { $argList += '-VizBoot' }
     Start-Process -FilePath 'powershell.exe' -ArgumentList $argList -Verb RunAs
     exit
 }
@@ -106,4 +108,38 @@ if (Test-Path -LiteralPath $wdScript) {
         -Principal $wdPrincipal -Settings $wdSettings -Force `
         -Description 'Restarts the receiver task if the raw log goes stale (hung process / post-sleep)' | Out-Null
     Write-Host "Watchdog registered (every 5 min, 10 min stale threshold, 30 min restart cooldown)"
+}
+
+# --- desktop shortcut: one double-click to the viz ----------------------------
+$vizScript = Join-Path $PSScriptRoot 'viz.ps1'
+if (Test-Path -LiteralPath $vizScript) {
+    $lnk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Omada Viz.lnk'
+    $ws = New-Object -ComObject WScript.Shell
+    $s = $ws.CreateShortcut($lnk)
+    $s.TargetPath = 'powershell.exe'
+    $s.Arguments = '-NoProfile -ExecutionPolicy Bypass -File "' + $vizScript + '"'
+    $s.WorkingDirectory = $PSScriptRoot
+    $s.Description = 'Omada Logger & Viz - live traffic dashboard'
+    if ($pyw) { $s.IconLocation = "$pyw,0" }
+    $s.Save()
+    Write-Host "Desktop shortcut created: $lnk"
+}
+
+# --- optional: always-on viz server (boot task) --------------------------------
+if ($VizBoot) {
+    $vizAction = New-ScheduledTaskAction -Execute $pyw `
+        -Argument ('"' + (Join-Path $PSScriptRoot 'omada_viz.py') + '" --port 8780') `
+        -WorkingDirectory $PSScriptRoot
+    $vizBootTrig = New-ScheduledTaskTrigger -AtStartup
+    $vizLogonTrig = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
+    $vizTrigger = @($vizBootTrig, $vizLogonTrig)
+    $vizPrincipal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType S4U -RunLevel Limited
+    $vizSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+        -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero) `
+        -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
+    Register-ScheduledTask -TaskName 'Omada Viz Server' -Action $vizAction -Trigger $vizTrigger `
+        -Principal $vizPrincipal -Settings $vizSettings -Force `
+        -Description 'Always-on localhost web UI for Omada Logger & Viz (http://localhost:8780)' | Out-Null
+    Start-ScheduledTask -TaskName 'Omada Viz Server'
+    Write-Host "Viz boot task registered + started (always available at http://localhost:8780)"
 }

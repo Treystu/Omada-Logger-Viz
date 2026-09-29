@@ -20,7 +20,10 @@ Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
 Stop-ScheduledTask -TaskName 'Omada Syslog Watchdog' -ErrorAction SilentlyContinue
 Unregister-ScheduledTask -TaskName 'Omada Syslog Watchdog' -Confirm:$false -ErrorAction SilentlyContinue
+Stop-ScheduledTask -TaskName 'Omada Viz Server' -ErrorAction SilentlyContinue
+Unregister-ScheduledTask -TaskName 'Omada Viz Server' -Confirm:$false -ErrorAction SilentlyContinue
+Remove-Item (Join-Path ([Environment]::GetFolderPath('Desktop')) 'Omada Viz.lnk') -ErrorAction SilentlyContinue
 Remove-NetFirewallRule -DisplayName $RuleName -ErrorAction SilentlyContinue
 
-Write-Host "Removed tasks '$TaskName' + 'Omada Syslog Watchdog' and firewall rule '$RuleName'."
+Write-Host "Removed tasks (receiver, watchdog, viz) + desktop shortcut and firewall rule '$RuleName'."
 Write-Host 'Log data left untouched at %LOCALAPPDATA%\OmadaSyslog'

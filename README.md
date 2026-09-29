@@ -55,10 +55,12 @@ Log → Log Settings** - enable remote logging and point it at this PC's LAN
 IP, port **514** (UDP). Omada remote logging is UDP-only; that's all this
 listens on.
 
-Watch it live:
+Watch it live - double-click the **Omada Viz** desktop shortcut (created by
+`install.ps1`), or:
 
 ```powershell
-python omada_viz.py          # then open http://localhost:8780
+.\viz.ps1                   # starts the server if needed, opens the browser
+.\viz.ps1 -Stop             # stops it
 ```
 
 Tail the raw log:
@@ -107,6 +109,7 @@ python omada_viz.py ──► browser :8780   scatterplot of tallies + raw tail
 | `condensed_view.py` | Query tool for the condensed tallies |
 | `syslog_parser.py` | Offline pretty-printer / filter for the raw log |
 | `omada_viz.py` + `viz.html` | On-demand web UI: interactive scatterplot of tallies + raw tail |
+| `viz.ps1` | One-click launcher: starts the viz (if needed) + opens the browser; `-Stop` stops it |
 | `test_receiver.py` | Integration tests (safe: high ports + temp files, 30+ checks) |
 
 ## Configuration
@@ -159,6 +162,14 @@ On-demand, read-only, localhost-only, zero dependencies:
 ```powershell
 python omada_viz.py          # then open http://localhost:8780
 ```
+
+Or just double-click the desktop shortcut / run `.\viz.ps1` (starts the
+server headless if needed, then opens the page; `.\viz.ps1 -Stop` stops it).
+
+Prefer always-on? `.\install.ps1 -VizBoot` registers a boot task so the
+dashboard is permanently available at http://localhost:8780 - the idle
+server costs a few MB of RAM; the only real work is building the data
+payload when a browser asks for it.
 
 Interactive time-series scatterplot of the condensed tallies (long-term)
 plus the raw-log tail (fine-grained; last 20k records, `--raw-tail` to
