@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Omada Logger & Viz — Free Windows Syslog Server & Traffic Visualizer for TP-Link Omada</title>
+<meta name="description" content="Free, zero-dependency syslog receiver for Windows. Collect TP-Link Omada firewall (ER8411) remote logging on UDP 514, condense it into per-flow tallies, and explore your network traffic live in a browser scatterplot. No signup, nothing for sale.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://treystu.github.io/Omada-Logger-Viz/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Omada Logger & Viz">
+<meta property="og:title" content="Omada Logger & Viz — Free Windows Syslog Server & Traffic Visualizer for TP-Link Omada">
+<meta property="og:description" content="Point your Omada firewall at this PC and watch your network live: UDP 514 receiver, flow-tally condenser, interactive browser scatterplot. Zero dependencies, MIT licensed.">
+<meta property="og:url" content="https://treystu.github.io/Omada-Logger-Viz/">
+<meta property="og:image" content="https://treystu.github.io/Omada-Logger-Viz/img/viz-outbound-log.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Omada Logger & Viz — Free Windows Syslog Server for TP-Link Omada">
+<meta name="twitter:description" content="Collect and view Omada firewall logs on Windows. Zero dependencies, live traffic visualization, MIT licensed.">
+<meta name="twitter:image" content="https://treystu.github.io/Omada-Logger-Viz/img/viz-outbound-log.png">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#14171c">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "Omada Logger & Viz",
+      "url": "https://treystu.github.io/Omada-Logger-Viz/",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Windows",
+      "description": "Free, zero-dependency Windows syslog receiver, condenser, and real-time traffic visualizer for TP-Link Omada firewalls. Listens on UDP 514, records to a 50 MB rolling log, tallies flows, and renders a live interactive scatterplot.",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "license": "https://spdx.org/licenses/MIT",
+      "author": { "@type": "Person", "name": "Lucas Ballek" },
+      "downloadUrl": "https://github.com/Treystu/Omada-Logger-Viz",
+      "screenshot": "https://treystu.github.io/Omada-Logger-Viz/img/viz-default.png",
+      "featureList": [
+        "UDP 514 syslog receiver with 50 MB rolling raw log",
+        "Ingestion-time condenser: flows tally to src/dst/proto/port counts with recent occurrence timestamps",
+        "Interactive browser scatterplot: swappable axes, log scale, RFC1918 direction slicing",
+        "Boot-start scheduled task with crash recovery and staleness watchdog",
+        "Zero dependencies - pure Python 3 stdlib and vanilla JS"
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is there really no cost and no catch?",
+          "acceptedAnswer": { "@type": "Answer", "text": "It is MIT-licensed open source: free to use, inspect, modify, and redistribute. No signup, no telemetry, no paid tier. Donations are optional and voluntary." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does it work with syslog senders other than TP-Link Omada?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes - it listens on standard UDP 514 and accepts any RFC3164-style sender. The flow-tally condensing is tuned for Omada's log format; other devices still record fully and tally by message template." }
+        },
+        {
+          "@type": "Question",
+          "name": "Where does my data go?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Nowhere. Everything stays on your PC: the raw log and tallies live in your local AppData, the visualization is served on localhost only, and no data is sent to any server." }
+        },
+        {
+          "@type": "Question",
+          "name": "Why UDP only - and why Windows only?",
+          "acceptedAnswer": { "@type": "Answer", "text": "TP-Link Omada devices expose remote logging over UDP syslog only, so that is what the receiver speaks. It is Windows-only because the headless install, firewall scoping, and watchdog are built around Task Scheduler and Windows Firewall." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+<style>
+  :root{--bg:#14171c;--bg2:#191d24;--card:#1c212b;--bd:#2a2f3a;--bd2:#3a4254;--fg:#d7dce3;--mut:#8a93a3;--acc:#7fd0ff;--acc2:#5dd5c8}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 system-ui,"Segoe UI",sans-serif}
+  .container{max-width:960px;margin:0 auto;padding:0 20px}
+  header{background:var(--bg2);border-bottom:1px solid var(--bd);padding:14px 0}
+  header .container{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+  .logo{font-weight:800;font-size:17px}.logo .hl{color:var(--acc)}
+  .logo .zap{color:#e0c05d}
+  nav a{color:var(--mut);text-decoration:none;font-size:13.5px;margin-left:16px}
+  nav a:hover{color:var(--acc)}
+  .hero{padding:56px 0 32px;text-align:center}
+  .tag{display:inline-block;border:1px solid var(--bd2);border-radius:999px;padding:4px 14px;color:var(--mut);font-size:12.5px;margin-bottom:18px}
+  h1{font-size:34px;line-height:1.2;margin:0 0 14px}
+  h1 .hl{color:var(--acc)}
+  .hero p{color:var(--mut);max-width:640px;margin:0 auto 8px}
+  .hero p strong{color:var(--fg)}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;max-width:760px;margin:28px auto 0;text-align:center}
+  .stat{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px 10px}
+  .stat .v{font-size:19px;font-weight:800;color:var(--acc2)}
+  .stat .l{font-size:12px;color:var(--mut);margin-top:3px}
+  .shot{margin:36px 0 8px;text-align:center}
+  .shot img{max-width:100%;border:1px solid var(--bd2);border-radius:10px;box-shadow:0 14px 44px rgba(0,0,0,.55)}
+  .cap{color:var(--mut);font-size:12.5px;margin:10px 0 0}
+  section{padding:40px 0}
+  h2{font-size:23px;margin:0 0 20px}
+  h2 .hl{color:var(--acc)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:18px}
+  .card h3{margin:0 0 8px;font-size:16px;color:var(--acc)}
+  .card p{margin:0;color:var(--mut);font-size:13.5px}
+  pre{background:#10131a;border:1px solid var(--bd);border-radius:8px;padding:14px;overflow:auto;font-size:13px;color:#a9c7b8}
+  pre .c{color:#6b7686}
+  .faq details{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:12px 16px;margin-bottom:10px}
+  .faq summary{cursor:pointer;font-weight:700;font-size:14.5px}
+  .faq p{color:var(--mut);font-size:13.5px;margin:10px 0 0}
+  .support{background:var(--bg2);border-top:1px solid var(--bd);border-bottom:1px solid var(--bd)}
+  .support .box{max-width:640px;margin:0 auto;text-align:center}
+  .support .box .inner{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:26px 22px}
+  .btns{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:18px 0 6px}
+  .btns a{background:#222733;color:var(--fg);border:1px solid #343b4a;border-radius:6px;padding:8px 18px;text-decoration:none;font-size:14px}
+  .btns a:hover{background:#2b4a6f;border-color:#3d5f8f}
+  .fine{color:var(--mut);font-size:12.5px;text-align:left;margin-top:14px}
+  footer{padding:28px 0 40px;color:var(--mut);font-size:13px;text-align:center}
+  footer a{color:var(--acc);text-decoration:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="container">
+    <div class="logo"><span class="zap">&#9889;</span> Omada <span class="hl">Logger & Viz</span></div>
+    <nav>
+      <a href="#what">What it does</a>
+      <a href="#start">Quickstart</a>
+      <a href="#faq">FAQ</a>
+      <a href="#support" style="color:var(--acc)">Support</a>
+      <a href="https://github.com/Treystu/Omada-Logger-Viz">GitHub &#8599;</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero container">
+  <div class="tag">Free for everyone &mdash; no signup &mdash; nothing for sale</div>
+  <h1>Point your Omada firewall at this PC.<br><span class="hl">Watch your network live.</span></h1>
+  <p>A <strong>free syslog server for Windows</strong>: a zero-dependency receiver that collects
+  TP-Link Omada remote logging on UDP 514, condenses the firehose into per-flow tallies,
+  and draws it as an interactive scatterplot in your browser.</p>
+  <p>Built and given away by <strong>Lucas Ballek</strong>.</p>
+  <div class="stats">
+    <div class="stat"><div class="v">$0</div><div class="l">Free, always &mdash; donations optional</div></div>
+    <div class="stat"><div class="v">0 deps</div><div class="l">Pure Python stdlib + vanilla JS</div></div>
+    <div class="stat"><div class="v">Localhost</div><div class="l">Your data never leaves your PC</div></div>
+    <div class="stat"><div class="v">MIT</div><div class="l">Open source, inspect everything</div></div>
+  </div>
+</div>
+
+<div class="shot container">
+  <img src="./img/viz-default.png" alt="Live traffic scatterplot: who has been talking to which services, when, and how much" width="1600" height="900">
+  <p class="cap">Default view of the live visualizer &mdash; a week of real traffic, ~40k rendered points (addresses sanitized for publication).</p>
+</div>
+
+<section id="what" class="container">
+  <h2>What it <span class="hl">does</span></h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Receive & roll</h3>
+      <p>Listens on UDP 514, splits Omada's multi-record datagrams into one
+      line each (receive time + sender + raw payload), and keeps a 50 MB
+      rolling raw log &mdash; newest events always survive, oldest roll off.
+      Runs headless from boot as a per-user scheduled task.</p>
+    </div>
+    <div class="card">
+      <h3>Condense the firehose</h3>
+      <p>Every record is tallied at ingestion: flows fold into
+      <b>src &rarr; dst/proto/port</b> counts with first/last seen and the 20
+      most recent occurrence timestamps; repeated alerts fold into message
+      templates. A week of syslog becomes a few thousand meaningful entries,
+      with exactly-once crash recovery.</p>
+    </div>
+    <div class="card">
+      <h3>Visualize live</h3>
+      <p>An interactive time-series scatterplot on localhost: swappable
+      X/Y axes, color and size encodings, log scale, and RFC1918 direction
+      slicing &mdash; internal, outbound, inbound. Hover for details, click
+      for the full tally. Auto-refreshes without disturbing your view.</p>
+    </div>
+  </div>
+  <div class="shot">
+    <img src="./img/viz-direction.png" alt="Traffic sliced by RFC1918 direction: internal, outbound, inbound" width="1600" height="900">
+    <p class="cap">Traffic sliced by direction &mdash; internal vs outbound vs inbound at a glance.</p>
+  </div>
+</section>
+
+<section id="start" class="container">
+  <h2>Quick<span class="hl">start</span></h2>
+  <pre><span class="c"># Windows 10/11, Python 3.8+ on PATH</span>
+git clone https://github.com/Treystu/Omada-Logger-Viz.git
+cd Omada-Logger-Viz
+.\install.ps1        <span class="c"># one UAC prompt: firewall rule + boot task + watchdog</span>
+
+<span class="c"># ER8411: System Tools > System Log > Log Settings</span>
+<span class="c">#   enable remote logging -> this PC's LAN IP, port 514 (UDP)</span>
+
+python omada_viz.py  <span class="c"># open http://localhost:8780</span></pre>
+</section>
+
+<section id="faq" class="container faq">
+  <h2>F<span class="hl">A</span>Q</h2>
+  <details open>
+    <summary>Is there really no cost and no catch?</summary>
+    <p>It is MIT-licensed open source: free to use, inspect, modify, and
+    redistribute. No signup, no telemetry, no paid tier. Donations are
+    optional and voluntary.</p>
+  </details>
+  <details>
+    <summary>Does it work with syslog senders other than TP-Link Omada?</summary>
+    <p>Yes &mdash; it listens on standard UDP 514 and accepts any RFC3164-style
+    sender. The flow-tally condensing is tuned for Omada's log format; other
+    devices still record fully and tally by message template.</p>
+  </details>
+  <details>
+    <summary>Where does my data go?</summary>
+    <p>Nowhere. Everything stays on your PC: the raw log and tallies live in
+    your local AppData, the visualization is served on localhost only, and
+    no data is sent to any server.</p>
+  </details>
+  <details>
+    <summary>Why UDP only &mdash; and why Windows only?</summary>
+    <p>TP-Link Omada devices expose remote logging over UDP syslog only, so
+    that is what the receiver speaks. It is Windows-only because the headless
+    install, firewall scoping, and watchdog are built around Task Scheduler
+    and Windows Firewall.</p>
+  </details>
+</section>
+
+<section id="support" class="support">
+  <div class="container">
+    <div class="box">
+      <h2>Support <span class="hl">this tool</span></h2>
+      <div class="inner">
+        <p>This is free and always will be. If it saved you a syslog-server
+        license or a Linux VM and you want to chip in, contributions go
+        directly to <strong>Lucas Ballek</strong> personally.</p>
+        <div class="btns">
+          <a href="https://www.paypal.me/LBallek" target="_blank" rel="noopener noreferrer">PayPal</a>
+          <a href="https://venmo.com/u/lucas-ballek" target="_blank" rel="noopener noreferrer">Venmo &mdash; @lucas-ballek</a>
+          <a href="https://cash.app/$luball" target="_blank" rel="noopener noreferrer">Cash App &mdash; $luball</a>
+        </div>
+        <p class="fine">Contributions are voluntary gifts to an individual,
+        not payment for a service, and are not tax-deductible. They buy
+        nothing: no priority support, no warranties, no promises about
+        future features.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p><a href="https://github.com/Treystu/Omada-Logger-Viz">Source on GitHub</a>
+    &middot; <a href="https://github.com/Treystu/Omada-Logger-Viz/releases/tag/v1.0.0">v1.0.0</a>
+    &middot; MIT License</p>
+    <p>Built and given away by Lucas Ballek.</p>
+  </div>
+</footer>
+</body>
+</html>

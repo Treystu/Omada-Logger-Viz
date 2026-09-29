@@ -1,7 +1,10 @@
 # Omada Logger & Viz
 
 **A zero-dependency Windows syslog receiver, condenser, and real-time
-visualizer for TP-Link Omada firewalls and gateways** (ER8411 and friends).
+visualizer for TP-Link Omada firewalls and gateways** (ER8411 and friends) -
+a free *syslog server for Windows*: if you've been looking for a way to
+collect and view Omada firewall logs without a Linux box or a paid product,
+this is it.
 
 Point your Omada device's remote logging at this PC and it will:
 
@@ -243,6 +246,17 @@ clean slate).
 - Everything is scoped to the current user (task identity and log data). The
   one machine-wide piece is the firewall port rule, which only admits
   inbound UDP 514 from the LAN subnet.
+
+## Support
+
+This is free and always will be. If it saved you a syslog-server license or a
+Linux VM and you want to chip in, contributions go directly to the author.
+
+[PayPal](https://www.paypal.me/LBallek) &middot; [Venmo — @lucas-ballek](https://venmo.com/u/lucas-ballek) &middot; [Cash App — $luball](https://cash.app/$luball)
+
+Contributions are voluntary gifts to an individual, not payment for a
+service, and are not tax-deductible. They buy nothing: no priority support,
+no warranties, no promises about future features.
 
 ## License
 
