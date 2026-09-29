@@ -270,7 +270,7 @@ function makeScale(v, pts, p0, p1, logMode, cacheKey){
       domainCache[cacheKey] = { lo: lo, hi: hi };
     }
     var span = hi - lo;
-    var n = Math.max(2, Math.min(7, Math.floor((p1 - p0) / 100)));
+    var n = Math.max(2, Math.min(7, Math.floor(Math.abs(p1 - p0) / 100)));
     var ticks = [];
     for (i = 0; i < n; i++){
       ticks.push({ x: p0 + (p1 - p0) * i / (n - 1), label: fmtTick(lo + span * i / (n - 1)) });
@@ -303,7 +303,7 @@ function makeScale(v, pts, p0, p1, logMode, cacheKey){
       var llo = Math.log(nlo), lhi = Math.log(nhi);
       if (lhi <= llo) lhi = llo + 1;
       var lspan = lhi - llo;
-      var lt = Math.max(2, Math.min(7, Math.floor((p1 - p0) / 90)));
+      var lt = Math.max(2, Math.min(7, Math.floor(Math.abs(p1 - p0) / 90)));
       var ltk = [];
       for (i = 0; i < lt; i++){
         ltk.push({ x: p0 + (p1 - p0) * i / (lt - 1), label: fmtNum(Math.exp(llo + lspan * i / (lt - 1))) });
@@ -312,7 +312,7 @@ function makeScale(v, pts, p0, p1, logMode, cacheKey){
                ticks: ltk, kind: "log" };
     }
     var nspan = nhi - nlo;
-    var nt = Math.max(2, Math.min(7, Math.floor((p1 - p0) / 90)));
+    var nt = Math.max(2, Math.min(7, Math.floor(Math.abs(p1 - p0) / 90)));
     var ntk = [];
     for (i = 0; i < nt; i++){
       ntk.push({ x: p0 + (p1 - p0) * i / (nt - 1), label: fmtNum(nlo + nspan * i / (nt - 1)) });
@@ -343,7 +343,7 @@ function makeScale(v, pts, p0, p1, logMode, cacheKey){
     return String(val);
   };
   var ticks = [];
-  var step = Math.max(1, Math.ceil(u.length * 16 / (p1 - p0)));
+  var step = Math.max(1, Math.ceil(u.length * 16 / Math.abs(p1 - p0)));
   for (i = 0; i < u.length; i += step){
     ticks.push({ x: p0 + lane * (i + 0.5), label: lblOf(u[i]) });
   }
@@ -467,7 +467,8 @@ function draw(){
   for (i = 0; i < sx.ticks.length; i++){
     t = sx.ticks[i];
     ctx.beginPath(); ctx.moveTo(t.x, y0); ctx.lineTo(t.x, y1); ctx.stroke();
-    ctx.fillText(trunc(t.label, 14), t.x, y1 + 14);
+    var lx = Math.min(Math.max(t.x, x0 + 34), x1 - 34);  // keep edge labels on-canvas
+    ctx.fillText(trunc(t.label, 14), lx, y1 + 14);
   }
   ctx.textAlign = "right"; ctx.textBaseline = "middle";
   for (i = 0; i < sy.ticks.length; i++){
@@ -518,6 +519,8 @@ function drawLegend(x1){
     return;
   }
   if (v === "count"){
+    ctx.fillStyle = "rgba(20,23,28,0.82)";
+    ctx.fillRect(x1 - 154, y - 16, 154, 52);
     var grd = ctx.createLinearGradient(x1 - 150, 0, x1 - 10, 0);
     grd.addColorStop(0, gradColor(0)); grd.addColorStop(1, gradColor(1));
     ctx.fillStyle = grd; ctx.fillRect(x1 - 150, y, 140, 10);
@@ -537,8 +540,12 @@ function drawLegend(x1){
     freq[key] = (freq[key] || 0) + 1;
   }
   var keys = Object.keys(freq).sort(function(a,b){ return freq[b] - freq[a]; });
-  ctx.fillStyle = "#aeb7c6"; ctx.fillText(LABEL[v] || v, x1 - 150, y - 6);
   var shown = Math.min(12, keys.length);
+  /* backing panel keeps legend text legible over dense points */
+  var lH = 22 + shown * 15 + ((keys.length > shown) ? 16 : 0);
+  ctx.fillStyle = "rgba(20,23,28,0.82)";
+  ctx.fillRect(x1 - 154, y - 16, 154, lH);
+  ctx.fillStyle = "#aeb7c6"; ctx.fillText(LABEL[v] || v, x1 - 150, y - 6);
   for (i = 0; i < shown; i++){
     var yy = y + 12 + i * 15;
     ctx.fillStyle = catColor(v, keys[i]);

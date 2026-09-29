@@ -93,7 +93,7 @@
   .stat .v{font-size:19px;font-weight:800;color:var(--acc2)}
   .stat .l{font-size:12px;color:var(--mut);margin-top:3px}
   .shot{margin:36px 0 8px;text-align:center}
-  .shot img{max-width:100%;border:1px solid var(--bd2);border-radius:10px;box-shadow:0 14px 44px rgba(0,0,0,.55)}
+  .shot img{width:100%;height:auto;display:block;border:1px solid var(--bd2);border-radius:10px;box-shadow:0 14px 44px rgba(0,0,0,.55)}
   .cap{color:var(--mut);font-size:12.5px;margin:10px 0 0}
   section{padding:40px 0}
   h2{font-size:23px;margin:0 0 20px}
@@ -148,8 +148,8 @@
 </div>
 
 <div class="shot container">
-  <img src="./img/viz-default.png" alt="Live traffic scatterplot: who has been talking to which services, when, and how much" width="1600" height="900">
-  <p class="cap">Default view of the live visualizer &mdash; a week of real traffic, ~40k rendered points (addresses sanitized for publication).</p>
+  <img src="./img/viz-default.png" alt="Live traffic scatterplot: services on a log-scaled dest-port axis over a week, colored by source, sized by count" width="1600" height="900">
+  <p class="cap">The live visualizer &mdash; a full day of real traffic on a log-scaled dest-port axis, ~40k rendered points (addresses sanitized for publication).</p>
 </div>
 
 <section id="what" class="container">
@@ -180,7 +180,7 @@
   </div>
   <div class="shot">
     <img src="./img/viz-direction.png" alt="Traffic sliced by RFC1918 direction: internal, outbound, inbound" width="1600" height="900">
-    <p class="cap">Traffic sliced by direction &mdash; internal vs outbound vs inbound at a glance.</p>
+    <p class="cap">Traffic sliced by direction &mdash; internal vs outbound at a glance; an inbound lane appears whenever external-to-LAN flows are logged.</p>
   </div>
 </section>
 

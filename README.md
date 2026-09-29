@@ -26,13 +26,13 @@ Zero pip installs - pure Python 3 stdlib and vanilla JS.
 
 ## Screenshots
 
-![Default view: who's been talking to which services, when, and how much](docs/img/viz-default.png)
+![Live traffic at a glance: services on a log-scaled dest-port axis, colored by source, sized by count](docs/img/viz-default.png)
 
 ![Outbound traffic: destinations by count, log-scaled Y axis](docs/img/viz-outbound-log.png)
 
-![Traffic sliced by RFC1918 direction: internal / outbound / inbound](docs/img/viz-direction.png)
+![Traffic sliced by RFC1918 direction (inbound lanes appear when external-to-LAN flows are logged)](docs/img/viz-direction.png)
 
-*Captured from a live deployment (~40k rendered points, seven days of traffic);
+*Captured from a live deployment (~40k rendered points, a full day of traffic);
 addresses sanitized.*
 
 ## Requirements
