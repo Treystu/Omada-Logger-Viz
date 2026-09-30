@@ -17,7 +17,7 @@ Point your Omada device's remote logging at this PC and it will:
 - **Show your traffic in real time** in a browser: interactive
   time-series scatterplot with swappable X/Y axes, color and size
   encodings, log scale, and RFC1918 direction slicing
-  (internal / outbound / inbound)
+  (internal / outbound / inbound / other)
 - **Heal itself**: boot-start scheduled task (no console window), crash
   recovery with exactly-once replay, and a watchdog that restarts the
   receiver if the log ever goes stale
@@ -185,7 +185,8 @@ change):
 - **Color / point size**: src, dst, port, proto, severity, dataset,
   direction, or count (blue-to-red gradient, log-scaled for even spread).
   Size also offers **per-group aggregates** - e.g. "distinct ports per
-  src" sizes each dot by how many different services its device talks to.
+  group" sizes each dot by how many different services its device talks to
+  (grouping follows the color variable, then the categorical axis).
 - **Precise filtering**: src/dst text match or its negation, dest-port
   include/exclude lists with ranges (`443, 53, 1000-2000`), RFC1918
   direction checkboxes in any combination (internal + inbound only, etc.),

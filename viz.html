@@ -77,7 +77,7 @@
   <div class="ctl" data-tip="Time window end (local time)."><label>to</label><input id="fTo" type="datetime-local"></div>
   <div class="ctl" data-tip="Maximum dots drawn at once (busiest kept first when exceeded). Lower it if the page feels slow."><label>point cap</label><input id="fCap" type="number" value="40000" style="width:76px"></div>
   <div class="ctl" data-tip="Refetch data every 30 s. Colors and zoom stay put; the time window slides forward quietly."><label>auto 30s</label><input id="chkAuto" type="checkbox" checked style="margin-top:4px"></div>
-  <button id="btnGo" onclick="refresh(true)" data-tip="Refetch the data and re-fit the axes to everything visible.">refresh</button>
+  <button id="btnGo" onclick="refresh(true)" data-tip="Refetch the data and re-fit the axes to everything visible. An active brush zoom keeps its window - use reset zoom to unzoom.">refresh</button>
   <button id="btnZoom" onclick="resetZoom()" data-tip="Undo the drag-zoom and show everything again. Double-clicking the chart does the same.">reset zoom</button>
   <button id="btnReset" onclick="resetFilters()" data-tip="Clear every filter, un-zoom, and restore the default view.">reset all</button>
   <button id="btnHelp" onclick="toggleHelp()" data-tip="Open the how-to guide (Esc closes it)." style="font-weight:800">?</button>
@@ -110,7 +110,7 @@
     <li><b>from / to</b> - time window; <b>min count</b> - busiest tallies only.</li>
   </ul>
   <h4>Encodings</h4>
-  <p>X / Y position, color and size can each be set to any aspect: time, source, destination, port, protocol, severity, direction, counts. Size also offers <b>per-group aggregates</b> - e.g. "distinct ports per src" sizes each dot by how many different services its device talks to. Grouping follows the color variable, then the categorical axis.</p>
+  <p>X / Y position, color and size can each be set to any aspect: time, source, destination, port, protocol, severity, direction, counts. Size also offers <b>per-group aggregates</b> - e.g. "distinct ports per group" sizes each dot by how many different services its device talks to (grouping follows the color variable, then the categorical axis).</p>
   <h4>Points</h4>
   <p><b>Hover</b> a dot for a summary; <b>click</b> it for the full tally entry. Each dot is one known occurrence (tallies) or one raw record.</p>
   <h4>Refresh</h4>
@@ -382,7 +382,7 @@ function makeScale(v, pts, p0, p1, logMode, cacheKey, zdom){
       if (t > hi) hi = t;
     }
     if (lo > hi) return null;
-    if (zdom){
+    if (zdom && typeof zdom.lo === "number"){
       lo = zdom.lo; hi = zdom.hi;                     // brushed zoom window
     } else {
       var cached = domainCache[cacheKey];
@@ -421,8 +421,8 @@ function makeScale(v, pts, p0, p1, logMode, cacheKey, zdom){
       if (fx > nhi) nhi = fx;
     }
     if (nlo > nhi) return null;
-    if (zdom){
-      nlo = zdom.lo; nhi = zdom.hi;                   // brushed zoom window
+    if (zdom && typeof zdom.lo === "number"){
+      nlo = zdom.lo; nhi = zdom.hi;                   // brushed zoom window (numeric payload only)
     } else {
       var cachedN = domainCache[cacheKey];
       if (cachedN){
@@ -435,6 +435,7 @@ function makeScale(v, pts, p0, p1, logMode, cacheKey, zdom){
       }
     }
     if (nhi <= nlo){ nhi = nlo + 1; }
+    if (!isFinite(nlo) || !isFinite(nhi)) return null;
     if (logMode && nlo > 0){
       var llo = Math.log(nlo), lhi = Math.log(nhi);
       if (lhi <= llo) lhi = llo + 1;
@@ -646,7 +647,8 @@ function draw(){
     if (vx === null || vx === undefined || vy === null || vy === undefined) continue;
     var px = sx.pos(vx), py = sy.pos(vy);
     if (px === null || py === null) continue;
-    if (px < x0 - 4 || px > x1 + 4 || py < y0 - 4 || py > y1 + 4) continue;
+    /* NaN-safe clip: fails closed on non-finite coordinates */
+    if (!(px >= x0 - 4 && px <= x1 + 4 && py >= y0 - 4 && py <= y1 + 4)) continue;
     ctx.globalAlpha = 0.6;
     ctx.fillStyle = colorOf(p);
     ctx.beginPath(); ctx.arc(px, py, sizeOf(p), 0, 6.2832); ctx.fill();
@@ -657,33 +659,40 @@ function draw(){
   updStatus();
 }
 
+function drawSizeLegend(x1, yTop, withBacking){
+  var sv = $("selS").value;
+  if (sv === "const") return 0;
+  if (withBacking){
+    ctx.fillStyle = "rgba(20,23,28,0.82)";
+    ctx.fillRect(x1 - 154, yTop - 12, 154, 52);
+  }
+  ctx.fillStyle = "#aeb7c6";
+  var sizeLbl = LABEL[sv] || sv;
+  if (sv.indexOf("agg_") === 0) sizeLbl += " [" + (LABEL[aggGroup] || aggGroup) + "]";
+  ctx.fillText("size: " + sizeLbl, x1 - 150, yTop);
+  var lo2, mid2, hi2;
+  if (sv === "count"){ lo2 = countMin; mid2 = (countMin + countMax) / 2; hi2 = countMax; }
+  else if (sv === "occ"){ lo2 = 0; mid2 = occMax / 2; hi2 = occMax; }
+  else { lo2 = aggMin; mid2 = (aggMin + aggMax) / 2; hi2 = aggMax; }
+  var vals = [lo2, mid2, hi2];
+  for (var i = 0; i < 3; i++){
+    var fake = (sv === "count") ? {count: vals[i], occ: 0}
+            : (sv === "occ") ? {count: 0, occ: vals[i]}
+            : {count: 0, occ: 0, __aggVal: vals[i]};
+    ctx.globalAlpha = 0.6; ctx.fillStyle = "#9ab0c8";
+    ctx.beginPath(); ctx.arc(x1 - 138 + i * 46, yTop + 18, sizeOf(fake), 0, 6.2832); ctx.fill();
+    ctx.globalAlpha = 1; ctx.fillStyle = "#8a93a3";
+    ctx.fillText(String(Math.round(vals[i])), x1 - 148 + i * 46, yTop + 38);
+  }
+  return 52;
+}
+
 function drawLegend(x1){
   var v = $("selC").value;
   var y = 24, i;
   ctx.font = "11px system-ui"; ctx.textAlign = "left";
   if (!v){
-    var sv = $("selS").value;
-    if (sv === "const") return;
-    ctx.fillStyle = "rgba(20,23,28,0.82)";
-    ctx.fillRect(x1 - 154, y - 16, 154, 68);
-    ctx.fillStyle = "#aeb7c6";
-    var sizeLbl = LABEL[sv] || sv;
-    if (sv.indexOf("agg_") === 0) sizeLbl += " [" + (LABEL[aggGroup] || aggGroup) + "]";
-    ctx.fillText("size: " + sizeLbl, x1 - 150, y);
-    var lo2, mid2, hi2;
-    if (sv === "count"){ lo2 = countMin; mid2 = (countMin + countMax) / 2; hi2 = countMax; }
-    else if (sv === "occ"){ lo2 = 0; mid2 = occMax / 2; hi2 = occMax; }
-    else { lo2 = aggMin; mid2 = (aggMin + aggMax) / 2; hi2 = aggMax; }
-    var vals = [lo2, mid2, hi2];
-    for (i = 0; i < 3; i++){
-      var fake = (sv === "count") ? {count: vals[i], occ: 0}
-              : (sv === "occ") ? {count: 0, occ: vals[i]}
-              : {count: 0, occ: 0, __aggVal: vals[i]};
-      ctx.globalAlpha = 0.6; ctx.fillStyle = "#9ab0c8";
-      ctx.beginPath(); ctx.arc(x1 - 138 + i * 46, 42, sizeOf(fake), 0, 6.2832); ctx.fill();
-      ctx.globalAlpha = 1; ctx.fillStyle = "#8a93a3";
-      ctx.fillText(String(Math.round(vals[i])), x1 - 148 + i * 46, 62);
-    }
+    drawSizeLegend(x1, 24, true);
     return;
   }
   if (v === "count"){
@@ -698,6 +707,7 @@ function drawLegend(x1){
     ctx.fillText(String(countMax), x1 - 10, y + 24);
     ctx.textAlign = "left";
     ctx.fillStyle = "#aeb7c6"; ctx.fillText("count", x1 - 150, y - 6);
+    drawSizeLegend(x1, 24 + 58, true);
     return;
   }
   var freq = {}, x, key;
@@ -709,8 +719,9 @@ function drawLegend(x1){
   }
   var keys = Object.keys(freq).sort(function(a,b){ return freq[b] - freq[a]; });
   var shown = Math.min(12, keys.length);
-  /* backing panel keeps legend text legible over dense points */
-  var lH = 22 + shown * 15 + ((keys.length > shown) ? 16 : 0);
+  /* backing panel covers legend text + (optional) size legend below it */
+  var lH = 22 + shown * 15 + ((keys.length > shown) ? 16 : 0)
+          + (($("selS").value !== "const") ? 56 : 0);
   ctx.fillStyle = "rgba(20,23,28,0.82)";
   ctx.fillRect(x1 - 154, y - 16, 154, lH);
   ctx.fillStyle = "#aeb7c6"; ctx.fillText(LABEL[v] || v, x1 - 150, y - 6);
@@ -724,6 +735,9 @@ function drawLegend(x1){
   if (keys.length > shown){
     ctx.fillStyle = "#6b7686";
     ctx.fillText("+" + (keys.length - shown) + " more", x1 - 150, y + 12 + shown * 15);
+  }
+  if ($("selS").value !== "const"){
+    drawSizeLegend(x1, y + 12 + shown * 15 + ((keys.length > shown) ? 16 : 0) + 8, false);
   }
 }
 
@@ -801,6 +815,13 @@ function resetFilters(){
   $("fFrom").value = "";
   $("fTo").value = "";
   $("fCap").value = "40000";
+  /* encodings too: this is "restore the default view" in full */
+  $("selX").value = "ts";
+  $("selY").value = "dpt";
+  $("selYS").value = "linear";
+  $("chkFlipY").checked = false;
+  $("selC").value = "src";
+  $("selS").value = "count";
   zoomX = zoomY = null;
   clearFitCaches();
   redrawFromPoints();
@@ -811,6 +832,7 @@ function toggleHelp(){
 }
 
 canvas.addEventListener("mousedown", function(ev){
+  if (ev.button !== 0) return;                    // left button only
   brushing = { x0: ev.offsetX, y0: ev.offsetY, x1: ev.offsetX, y1: ev.offsetY };
   dragMoved = false;
 });
@@ -861,7 +883,10 @@ canvas.addEventListener("mouseleave", function(){
   if (brushing){ brushing = null; drawBrush(); }
   tip.style.display = "none";
 });
-canvas.addEventListener("dblclick", function(){ resetZoom(); });
+canvas.addEventListener("dblclick", function(){
+  $("detail").style.display = "none";   // first click of the pair may have opened it
+  resetZoom();
+});
 canvas.addEventListener("click", function(ev){
   if (dragMoved){ dragMoved = false; return; }
   var h = hitTest(ev.offsetX, ev.offsetY);
