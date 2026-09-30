@@ -32,30 +32,59 @@
   .sup-hint{color:#6b7686;font-size:10.5px}
   #barSupport{color:#6b7686;text-decoration:none;font-size:12px;padding-bottom:4px}
   #barSupport:hover{color:#7fd0ff}
+  [data-tip]{position:relative}
+  [data-tip]:hover::after{content:attr(data-tip);position:absolute;top:calc(100% + 6px);left:0;z-index:30;background:#1c212b;border:1px solid #3a4254;color:#d7dce3;font:11px/1.5 system-ui;padding:6px 9px;border-radius:6px;white-space:pre-line;max-width:290px;text-align:left;box-shadow:0 4px 14px rgba(0,0,0,.6);pointer-events:none}
+  .dirgrp{display:flex;gap:8px;align-items:center;padding:2px 0}
+  .dl{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#8a93a3;cursor:pointer;white-space:nowrap}
+  .dl input{margin:0}
+  #brush{position:absolute;border:1px solid #7fd0ff;background:rgba(127,208,255,0.13);display:none;pointer-events:none;z-index:4}
+  #helpPanel{position:fixed;inset:0;background:rgba(10,12,16,0.72);display:none;z-index:40;align-items:center;justify-content:center}
+  .hp-card{background:#161a21;border:1px solid #3a4254;border-radius:10px;max-width:580px;max-height:84vh;overflow:auto;padding:22px 26px;position:relative;box-shadow:0 14px 44px rgba(0,0,0,.6)}
+  .hp-card h3{margin:0 0 12px;font-size:15px;color:#7fd0ff}
+  .hp-card h4{margin:14px 0 6px;font-size:12.5px;color:#aeb7c6}
+  .hp-card p,.hp-card li{font-size:12.5px;color:#8a93a3;line-height:1.55}
+  .hp-card ul{margin:4px 0 4px 18px;padding:0}
+  .hp-card b{color:#d7dce3}
+  .hp-x{position:absolute;top:8px;right:10px;background:#222733;color:#d7dce3;border:1px solid #343b4a;border-radius:4px;padding:2px 9px;cursor:pointer}
 </style>
 </head>
 <body>
 <div id="bar">
-  <div class="ctl"><label>X axis</label><select id="selX"></select></div>
-  <div class="ctl"><label>Y axis</label><select id="selY"></select></div>
-  <div class="ctl"><label>Y scale</label><select id="selYS"><option value="linear">linear</option><option value="log">log</option></select></div>
-  <div class="ctl"><label>flip Y</label><input id="chkFlipY" type="checkbox" style="margin-top:4px"></div>
-  <div class="ctl"><label>Color</label><select id="selC"></select></div>
-  <div class="ctl"><label>Size</label><select id="selS"></select></div>
-  <div class="ctl"><label>src contains</label><input id="fSrc" size="10" placeholder="192.0.2.10"></div>
-  <div class="ctl"><label>dst contains</label><input id="fDst" size="10" placeholder="198.51.100.20"></div>
-  <div class="ctl"><label>min count</label><input id="fMin" type="number" value="0" min="0" style="width:64px"></div>
-  <div class="ctl"><label>flow/msg</label><select id="fType"><option value="both">both</option><option value="flow">flow</option><option value="msg">msg</option></select></div>
-  <div class="ctl"><label>dataset</label><select id="fDs"><option value="both">tallies + raw</option><option value="tally">tallies</option><option value="raw">raw</option></select></div>
-  <div class="ctl"><label>direction</label><select id="fDir"><option value="all">all</option><option value="internal">internal</option><option value="outbound">outbound</option><option value="inbound">inbound</option><option value="other">other</option></select></div>
-  <div class="ctl"><label>from</label><input id="fFrom" type="datetime-local"></div>
-  <div class="ctl"><label>to</label><input id="fTo" type="datetime-local"></div>
-  <div class="ctl"><label>point cap</label><input id="fCap" type="number" value="40000" style="width:76px"></div>
-  <div class="ctl"><label>auto 30s</label><input id="chkAuto" type="checkbox" checked style="margin-top:4px"></div>
-  <button id="btnGo" onclick="refresh(true)">refresh</button>
+  <div class="ctl" data-tip="What the horizontal position of each dot means. time = when the record occurred (or first/last seen for tallies)."><label>X axis</label><select id="selX"></select></div>
+  <div class="ctl" data-tip="What the vertical position of each dot means. Categorical values get one lane each; numeric axes can use the Y scale option."><label>Y axis</label><select id="selY"></select></div>
+  <div class="ctl" data-tip="Numeric Y axes: linear spacing, or log (great for skewed counts or port numbers)."><label>Y scale</label><select id="selYS"><option value="linear">linear</option><option value="log">log</option></select></div>
+  <div class="ctl" data-tip="Flip the vertical axis direction (top-down instead of bottom-up)."><label>flip Y</label><input id="chkFlipY" type="checkbox" style="margin-top:4px"></div>
+  <div class="ctl" data-tip="Dot color by category (stable palette - the busiest categories always get distinct colors) or by count on a blue-to-red gradient."><label>Color</label><select id="selC"></select></div>
+  <div class="ctl" data-tip="Dot size. The 'per group' options aggregate over the color/axis category - e.g. with grouping by src, 'distinct ports per group' sizes each dot by how many different services its device talks to."><label>Size</label><select id="selS"></select></div>
+  <div class="ctl" data-tip="Show only records whose source IP contains this text (substring match)."><label>src contains</label><input id="fSrc" size="10" placeholder="192.0.2.10"></div>
+  <div class="ctl" data-tip="Hide records whose source IP contains this text."><label>src not</label><input id="fSrcNot" size="10" placeholder="192.0.2.99"></div>
+  <div class="ctl" data-tip="Show only records whose destination IP contains this text."><label>dst contains</label><input id="fDst" size="10" placeholder="198.51.100.20"></div>
+  <div class="ctl" data-tip="Hide records whose destination IP contains this text."><label>dst not</label><input id="fDstNot" size="10" placeholder="203.0.113.7"></div>
+  <div class="ctl" data-tip="Show only these dest ports. Comma list and/or ranges, e.g. 443, 53, 1000-2000."><label>ports are</label><input id="fPortIn" size="11" placeholder="443, 1000-2000"></div>
+  <div class="ctl" data-tip="Exclude these dest ports - e.g. enter 443 to see everything OTHER than that port."><label>ports not</label><input id="fPortNot" size="11" placeholder="443"></div>
+  <div class="ctl" data-tip="RFC1918 direction classes. Untick any combination - e.g. untick 'out' and 'other' for internal + inbound only. Unchecking all shows nothing."><label>direction</label>
+    <span class="dirgrp">
+      <label class="dl"><input type="checkbox" id="chkDirInt" checked>int</label>
+      <label class="dl"><input type="checkbox" id="chkDirOut" checked>out</label>
+      <label class="dl"><input type="checkbox" id="chkDirIn" checked>in</label>
+      <label class="dl"><input type="checkbox" id="chkDirOth" checked>other</label>
+    </span>
+  </div>
+  <div class="ctl" data-tip="Show only flow records, only messages (alerts / system events), or both."><label>flow/msg</label><select id="fType"><option value="both">both</option><option value="flow">flow</option><option value="msg">msg</option></select></div>
+  <div class="ctl" data-tip="Data source: long-term tallies (condensed counts), the recent raw-log tail, or both."><label>dataset</label><select id="fDs"><option value="both">tallies + raw</option><option value="tally">tallies</option><option value="raw">raw</option></select></div>
+  <div class="ctl" data-tip="Hide tally entries with fewer than this many occurrences."><label>min count</label><input id="fMin" type="number" value="0" min="0" style="width:64px"></div>
+  <div class="ctl" data-tip="Time window start (local time). Leave empty for everything."><label>from</label><input id="fFrom" type="datetime-local"></div>
+  <div class="ctl" data-tip="Time window end (local time)."><label>to</label><input id="fTo" type="datetime-local"></div>
+  <div class="ctl" data-tip="Maximum dots drawn at once (busiest kept first when exceeded). Lower it if the page feels slow."><label>point cap</label><input id="fCap" type="number" value="40000" style="width:76px"></div>
+  <div class="ctl" data-tip="Refetch data every 30 s. Colors and zoom stay put; the time window slides forward quietly."><label>auto 30s</label><input id="chkAuto" type="checkbox" checked style="margin-top:4px"></div>
+  <button id="btnGo" onclick="refresh(true)" data-tip="Refetch the data and re-fit the axes to everything visible. An active brush zoom keeps its window - use reset zoom to unzoom.">refresh</button>
+  <button id="btnZoom" onclick="resetZoom()" data-tip="Undo the drag-zoom and show everything again. Double-clicking the chart does the same.">reset zoom</button>
+  <button id="btnReset" onclick="resetFilters()" data-tip="Clear every filter, un-zoom, and restore the default view.">reset all</button>
+  <button id="btnHelp" onclick="toggleHelp()" data-tip="Open the how-to guide (Esc closes it)." style="font-weight:800">?</button>
+  <a id="barSupport" href="https://www.paypal.me/LBallek" target="_blank" rel="noopener noreferrer" title="Support this project - PayPal, Venmo @lucas-ballek, Cash App $luball">Support</a>
   <div id="status">loading...</div>
 </div>
-<div id="wrap"><canvas id="plot"></canvas><div id="tip"></div><div id="supportRibbon">
+<div id="wrap"><canvas id="plot"></canvas><div id="tip"></div><div id="brush"></div><div id="supportRibbon">
   <span class="sup-x" onclick="dismissSupport()" title="Dismiss (won't show again)">&#215;</span>
   <b>Found this useful?</b><br>
   This tool is free and always will be.
@@ -67,14 +96,37 @@
   <span class="sup-hint">PayPal &middot; @lucas-ballek &middot; $luball</span>
 </div></div>
 <div id="detail"><button onclick="document.getElementById('detail').style.display='none'">close</button><h3>entry</h3><pre id="detailBody"></pre></div>
+<div id="helpPanel" onclick="if(event.target===this)toggleHelp()"><div class="hp-card">
+  <button class="hp-x" onclick="toggleHelp()">close</button>
+  <h3>Driving the dashboard</h3>
+  <h4>Zoom</h4>
+  <p><b>Drag a rectangle on the chart</b> to zoom into any region - dense clusters become readable. <b>Double-click</b> the chart, press <b>Esc</b>, or hit "reset zoom" to zoom back out. Zoom holds while data refreshes; changing an axis resets it.</p>
+  <h4>Filters</h4>
+  <ul>
+    <li><b>src / dst contains</b> - keep matching text (substring).</li>
+    <li><b>src / dst not</b> - hide matching text.</li>
+    <li><b>ports are / ports not</b> - dest-port lists, e.g. <b>443, 53, 1000-2000</b>. "ports not" shows everything except those ports.</li>
+    <li><b>direction</b> - tick any combination: e.g. untick <b>out</b> and <b>other</b> for internal and inbound only.</li>
+    <li><b>from / to</b> - time window; <b>min count</b> - busiest tallies only.</li>
+  </ul>
+  <h4>Encodings</h4>
+  <p>X / Y position, color and size can each be set to any aspect: time, source, destination, port, protocol, severity, direction, counts. Size also offers <b>per-group aggregates</b> - e.g. "distinct ports per group" sizes each dot by how many different services its device talks to (grouping follows the color variable, then the categorical axis).</p>
+  <h4>Points</h4>
+  <p><b>Hover</b> a dot for a summary; <b>click</b> it for the full tally entry. Each dot is one known occurrence (tallies) or one raw record.</p>
+  <h4>Refresh</h4>
+  <p>Data refetches every 30 s (toggle "auto 30s"). Colors and zoom stay stable; the time window slides forward. "refresh" refits the axes; "reset all" restores defaults.</p>
+  <p style="margin-top:10px">Hover any control for a one-line explanation. Press <b>Esc</b> to close this guide.</p>
+</div></div>
 <script>
 "use strict";
 var AXES = ["ts","first","last","count","src","dst","dpt","proto","sev","type","ds","dir"];
 var COLORVARS = ["","src","dst","dpt","proto","sev","type","ds","dir","count"];
-var SIZEVARS = ["const","count","occ"];
+var SIZEVARS = ["const","count","occ","agg_rec","agg_dpt","agg_dst","agg_days"];
 var LABEL = {ts:"time",first:"first seen",last:"last seen",count:"count",src:"src",dst:"dst",
   dpt:"dest port",proto:"proto",sev:"severity",type:"flow/msg",ds:"dataset",
-  dir:"direction","":"none",const:"constant",occ:"# occurrences"};
+  dir:"direction","":"none",const:"constant",occ:"# occurrences",
+  agg_rec:"records per group",agg_dpt:"distinct ports per group",
+  agg_dst:"distinct dests per group",agg_days:"active days per group"};
 var TIMEK = {ts:1,first:1,last:1};
 var SEVN = ["emerg","alert","crit","err","warning","notice","info","debug"];
 var PROTO = {1:"icmp",6:"tcp",17:"udp"};
@@ -125,6 +177,12 @@ var countMin = 0, countMax = 1, occMax = 1;
 var domainCache = {};
 var laneCache = {};
 function clearFitCaches(){ domainCache = {}; laneCache = {}; }
+/* brush-zoom state: {v, lo, hi} for numeric/time axes, {v, lanes:[...]} for
+   categorical ones. Applied in makeScale while active; cleared on reset. */
+var zoomX = null, zoomY = null;
+var lastScaleX = null, lastScaleY = null, lastPlot = null;
+/* per-group size aggregates (see computeAggregates) */
+var aggGroup = "src", aggVals = {}, aggMin = 0, aggMax = 1;
 
 function buildAllPoints(){
   var pts = [], i, k, ts;
@@ -159,21 +217,47 @@ function buildAllPoints(){
   return pts;
 }
 
+function parsePortList(s){
+  var out = [], i, m;
+  var parts = s.split(",");
+  for (i = 0; i < parts.length; i++){
+    m = parts[i].match(/^\s*(\d+)(?:\s*-\s*(\d+))?\s*$/);
+    if (m) out.push([parseInt(m[1], 10), m[2] ? parseInt(m[2], 10) : parseInt(m[1], 10)]);
+  }
+  return out;
+}
+function portMatch(dpt, list){
+  if (dpt === null || dpt === undefined) return false;
+  for (var i = 0; i < list.length; i++){
+    if (dpt >= list[i][0] && dpt <= list[i][1]) return true;
+  }
+  return false;
+}
+
 function applyFilters(){
   var fSrc = $("fSrc").value.trim(), fDst = $("fDst").value.trim();
+  var fSrcNot = $("fSrcNot").value.trim(), fDstNot = $("fDstNot").value.trim();
+  var portIn = parsePortList($("fPortIn").value);
+  var portNot = parsePortList($("fPortNot").value);
+  var dirs = { internal: $("chkDirInt").checked, outbound: $("chkDirOut").checked,
+               inbound: $("chkDirIn").checked, other: $("chkDirOth").checked };
   var fMin = parseInt($("fMin").value, 10) || 0;
-  var fType = $("fType").value, fDs = $("fDs").value, fDir = $("fDir").value;
+  var fType = $("fType").value, fDs = $("fDs").value;
   var fFrom = $("fFrom").value, fTo = $("fTo").value;
   var cap = parseInt($("fCap").value, 10) || 40000;
   var out = [];
   for (var i = 0; i < allPoints.length; i++){
     var p = allPoints[i];
     if (fSrc && String(p.src || "").indexOf(fSrc) < 0) continue;
+    if (fSrcNot && String(p.src || "").indexOf(fSrcNot) >= 0) continue;
     if (fDst && String(p.dst || "").indexOf(fDst) < 0) continue;
+    if (fDstNot && String(p.dst || "").indexOf(fDstNot) >= 0) continue;
+    if (portIn.length && !portMatch(p.dpt, portIn)) continue;
+    if (portNot.length && portMatch(p.dpt, portNot)) continue;
+    if (!dirs[p.dir || "other"]) continue;
     if (p.count < fMin) continue;
     if (fType !== "both" && p.type !== fType) continue;
     if (fDs !== "both" && p.ds !== fDs) continue;
-    if (fDir !== "all" && p.dir !== fDir) continue;
     if (fFrom && p.ts < fFrom) continue;
     if (fTo && p.ts > fTo) continue;
     out.push(p);
@@ -193,6 +277,47 @@ function computeRanges(){
   }
   if (countMin === Infinity){ countMin = 0; countMax = 1; }
   if (countMax <= countMin) countMax = countMin + 1;
+  computeAggregates();
+}
+
+function isCatVar(v){
+  return v === "src" || v === "dst" || v === "dpt" || v === "proto" ||
+         v === "sev" || v === "type" || v === "ds" || v === "dir";
+}
+function sizeGroupVar(){
+  var c = $("selC").value;
+  if (c && c !== "count" && isCatVar(c)) return c;
+  if (isCatVar($("selY").value)) return $("selY").value;
+  if (isCatVar($("selX").value)) return $("selX").value;
+  return "src";
+}
+function computeAggregates(){
+  aggVals = {}; aggMin = 0; aggMax = 1; aggGroup = "src";
+  var sv = $("selS").value;
+  if (sv.indexOf("agg_") !== 0) return;
+  aggGroup = sizeGroupVar();
+  var rec = {}, dpts = {}, dsts = {}, days = {}, i, p, k;
+  for (i = 0; i < points.length; i++){
+    p = points[i];
+    k = colorKey(aggGroup, (p[aggGroup] === null || p[aggGroup] === undefined) ? "-" : p[aggGroup]);
+    rec[k] = (rec[k] || 0) + (p.count || 0);
+    if (p.dpt !== null && p.dpt !== undefined){ dpts[k] = dpts[k] || {}; dpts[k][p.dpt] = 1; }
+    if (p.dst){ dsts[k] = dsts[k] || {}; dsts[k][p.dst] = 1; }
+    days[k] = days[k] || {}; days[k][String(p.ts).slice(0, 10)] = 1;
+  }
+  aggMin = Infinity; aggMax = -Infinity;
+  for (k in rec){
+    var v2;
+    if (sv === "agg_rec") v2 = rec[k];
+    else if (sv === "agg_dpt") v2 = Object.keys(dpts[k] || {}).length;
+    else if (sv === "agg_dst") v2 = Object.keys(dsts[k] || {}).length;
+    else v2 = Object.keys(days[k] || {}).length;
+    aggVals[k] = v2;
+    if (v2 < aggMin) aggMin = v2;
+    if (v2 > aggMax) aggMax = v2;
+  }
+  if (aggMin === Infinity){ aggMin = 0; aggMax = 1; }
+  if (aggMax <= aggMin) aggMax = aggMin + 1;
 }
 
 function ipKey(v){
@@ -245,7 +370,7 @@ function fmtTick(t){
   return p2(d.getMonth() + 1) + "-" + p2(d.getDate()) + " " + p2(d.getHours()) + ":" + p2(d.getMinutes());
 }
 
-function makeScale(v, pts, p0, p1, logMode, cacheKey){
+function makeScale(v, pts, p0, p1, logMode, cacheKey, zdom){
   var i, x;
   if (TIMEK[v]){
     var lo = Infinity, hi = -Infinity;
@@ -257,26 +382,32 @@ function makeScale(v, pts, p0, p1, logMode, cacheKey){
       if (t > hi) hi = t;
     }
     if (lo > hi) return null;
-    var cached = domainCache[cacheKey];
-    if (cached){
-      if (hi > cached.hi){
-        var dur = cached.hi - cached.lo;   // slide the window, keep its width
-        cached.hi = hi;
-        cached.lo = hi - dur;
-      }
-      lo = cached.lo; hi = cached.hi;
+    if (zdom && typeof zdom.lo === "number"){
+      lo = zdom.lo; hi = zdom.hi;                     // brushed zoom window
     } else {
-      if (hi === lo){ lo -= 3600000; hi += 3600000; }
-      domainCache[cacheKey] = { lo: lo, hi: hi };
+      var cached = domainCache[cacheKey];
+      if (cached){
+        if (hi > cached.hi){
+          var dur = cached.hi - cached.lo;   // slide the window, keep its width
+          cached.hi = hi;
+          cached.lo = hi - dur;
+        }
+        lo = cached.lo; hi = cached.hi;
+      } else {
+        if (hi === lo){ lo -= 3600000; hi += 3600000; }
+        domainCache[cacheKey] = { lo: lo, hi: hi };
+      }
     }
     var span = hi - lo;
+    if (span <= 0){ span = 3600000; hi = lo + span; }
     var n = Math.max(2, Math.min(7, Math.floor(Math.abs(p1 - p0) / 100)));
     var ticks = [];
     for (i = 0; i < n; i++){
       ticks.push({ x: p0 + (p1 - p0) * i / (n - 1), label: fmtTick(lo + span * i / (n - 1)) });
     }
     return { pos: function(val){ var t = Date.parse(val); return isNaN(t) ? null : p0 + (t - lo) / span * (p1 - p0); },
-             ticks: ticks, kind: "time" };
+             inv: function(px){ return lo + (px - p0) / (p1 - p0) * span; },
+             ticks: ticks, kind: "time", p0: p0, p1: p1 };
   }
   var isNum = (v === "count");
   if (v === "dpt" && uniqVals(v, pts).length > 60) isNum = true;
@@ -290,15 +421,21 @@ function makeScale(v, pts, p0, p1, logMode, cacheKey){
       if (fx > nhi) nhi = fx;
     }
     if (nlo > nhi) return null;
-    var cachedN = domainCache[cacheKey];
-    if (cachedN){
-      if (nlo < cachedN.lo) cachedN.lo = nlo;    // grow-only: never shrink on auto-refresh
-      if (nhi > cachedN.hi) cachedN.hi = nhi;
-      nlo = cachedN.lo; nhi = cachedN.hi;
+    if (zdom && typeof zdom.lo === "number"){
+      nlo = zdom.lo; nhi = zdom.hi;                   // brushed zoom window (numeric payload only)
     } else {
-      if (nhi === nlo){ nlo -= 1; nhi += 1; }
-      domainCache[cacheKey] = { lo: nlo, hi: nhi };
+      var cachedN = domainCache[cacheKey];
+      if (cachedN){
+        if (nlo < cachedN.lo) cachedN.lo = nlo;    // grow-only: never shrink on auto-refresh
+        if (nhi > cachedN.hi) cachedN.hi = nhi;
+        nlo = cachedN.lo; nhi = cachedN.hi;
+      } else {
+        if (nhi === nlo){ nlo -= 1; nhi += 1; }
+        domainCache[cacheKey] = { lo: nlo, hi: nhi };
+      }
     }
+    if (nhi <= nlo){ nhi = nlo + 1; }
+    if (!isFinite(nlo) || !isFinite(nhi)) return null;
     if (logMode && nlo > 0){
       var llo = Math.log(nlo), lhi = Math.log(nhi);
       if (lhi <= llo) lhi = llo + 1;
@@ -309,7 +446,8 @@ function makeScale(v, pts, p0, p1, logMode, cacheKey){
         ltk.push({ x: p0 + (p1 - p0) * i / (lt - 1), label: fmtNum(Math.exp(llo + lspan * i / (lt - 1))) });
       }
       return { pos: function(val){ var f = +val; if (isNaN(f) || f <= 0) return null; return p0 + (Math.log(f) - llo) / lspan * (p1 - p0); },
-               ticks: ltk, kind: "log" };
+               inv: function(px){ return Math.exp(llo + (px - p0) / (p1 - p0) * lspan); },
+               ticks: ltk, kind: "log", p0: p0, p1: p1 };
     }
     var nspan = nhi - nlo;
     var nt = Math.max(2, Math.min(7, Math.floor(Math.abs(p1 - p0) / 90)));
@@ -318,19 +456,25 @@ function makeScale(v, pts, p0, p1, logMode, cacheKey){
       ntk.push({ x: p0 + (p1 - p0) * i / (nt - 1), label: fmtNum(nlo + nspan * i / (nt - 1)) });
     }
     return { pos: function(val){ var f = +val; return isNaN(f) ? null : p0 + (f - nlo) / nspan * (p1 - p0); },
-             ticks: ntk, kind: "num" };
+             inv: function(px){ return nlo + (px - p0) / (p1 - p0) * nspan; },
+             ticks: ntk, kind: "num", p0: p0, p1: p1 };
   }
   var fresh = sortVals(v, uniqVals(v, pts));
-  var u = laneCache[cacheKey];
-  if (u){
-    var have = {};
-    for (i = 0; i < u.length; i++) have[typeof u[i] + ":" + u[i]] = 1;
-    for (i = 0; i < fresh.length; i++){
-      var fk = typeof fresh[i] + ":" + fresh[i];
-      if (!have[fk]){ u.push(fresh[i]); have[fk] = 1; }   // append: lanes never shift
-    }
+  var u;
+  if (zdom && zdom.lanes && zdom.lanes.length){
+    u = zdom.lanes;                                   // brushed lane subset (zoom)
   } else {
-    u = fresh;
+    u = laneCache[cacheKey];
+    if (u){
+      var have = {};
+      for (i = 0; i < u.length; i++) have[typeof u[i] + ":" + u[i]] = 1;
+      for (i = 0; i < fresh.length; i++){
+        var fk = typeof fresh[i] + ":" + fresh[i];
+        if (!have[fk]){ u.push(fresh[i]); have[fk] = 1; }   // append: lanes never shift
+      }
+    } else {
+      u = fresh;
+    }
   }
   if (u.length) laneCache[cacheKey] = u;
   if (!u.length) return null;
@@ -351,7 +495,7 @@ function makeScale(v, pts, p0, p1, logMode, cacheKey){
              var i2 = idx[typeof val + ":" + val];
              return (i2 === undefined) ? null : p0 + lane * (i2 + 0.5);
            },
-           ticks: ticks, kind: "cat", n: u.length };
+           ticks: ticks, kind: "cat", n: u.length, lanes: u, p0: p0, lane: lane };
 }
 
 function hashStr(s){ var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; }
@@ -428,7 +572,18 @@ function sizeOf(p){
   var v = $("selS").value;
   if (v === "const") return 3.2;
   if (v === "count") return 2 + 12 * Math.sqrt((p.count - countMin) / ((countMax - countMin) || 1));
-  return 2 + 12 * Math.sqrt(p.occ / (occMax || 1));
+  if (v === "occ") return 2 + 12 * Math.sqrt(p.occ / (occMax || 1));
+  if (v.indexOf("agg_") === 0){
+    var val;
+    if (p.__aggVal !== undefined){
+      val = p.__aggVal;
+    } else {
+      var k = colorKey(aggGroup, (p[aggGroup] === null || p[aggGroup] === undefined) ? "-" : p[aggGroup]);
+      val = aggVals[k] || 0;
+    }
+    return 2 + 12 * Math.sqrt((val - aggMin) / ((aggMax - aggMin) || 1));
+  }
+  return 3.2;
 }
 
 var canvas = $("plot"), wrap = $("wrap"), tip = $("tip");
@@ -452,8 +607,11 @@ function draw(){
   var x0 = MX0, x1 = W - MXR, y0 = MTOP, y1 = H - MBOT;
   var Xv = $("selX").value, Yv = $("selY").value;
   var flip = $("chkFlipY").checked;
-  var sx = makeScale(Xv, points, x0, x1, false, "x|" + Xv);
-  var sy = makeScale(Yv, points, flip ? y0 : y1, flip ? y1 : y0, $("selYS").value === "log", "y|" + Yv);
+  var sx = makeScale(Xv, points, x0, x1, false, "x|" + Xv,
+                     (zoomX && zoomX.v === Xv) ? zoomX : null);
+  var sy = makeScale(Yv, points, flip ? y0 : y1, flip ? y1 : y0, $("selYS").value === "log",
+                     "y|" + Yv, (zoomY && zoomY.v === Yv) ? zoomY : null);
+  lastScaleX = sx; lastScaleY = sy; lastPlot = { x0: x0, x1: x1, y0: y0, y1: y1 };
   drawn = [];
   if (!sx || !sy || !points.length){
     ctx.fillStyle = "#6b7686"; ctx.font = "14px system-ui"; ctx.textAlign = "center";
@@ -489,7 +647,8 @@ function draw(){
     if (vx === null || vx === undefined || vy === null || vy === undefined) continue;
     var px = sx.pos(vx), py = sy.pos(vy);
     if (px === null || py === null) continue;
-    if (px < x0 - 4 || px > x1 + 4 || py < y0 - 4 || py > y1 + 4) continue;
+    /* NaN-safe clip: fails closed on non-finite coordinates */
+    if (!(px >= x0 - 4 && px <= x1 + 4 && py >= y0 - 4 && py <= y1 + 4)) continue;
     ctx.globalAlpha = 0.6;
     ctx.fillStyle = colorOf(p);
     ctx.beginPath(); ctx.arc(px, py, sizeOf(p), 0, 6.2832); ctx.fill();
@@ -500,22 +659,40 @@ function draw(){
   updStatus();
 }
 
+function drawSizeLegend(x1, yTop, withBacking){
+  var sv = $("selS").value;
+  if (sv === "const") return 0;
+  if (withBacking){
+    ctx.fillStyle = "rgba(20,23,28,0.82)";
+    ctx.fillRect(x1 - 154, yTop - 12, 154, 52);
+  }
+  ctx.fillStyle = "#aeb7c6";
+  var sizeLbl = LABEL[sv] || sv;
+  if (sv.indexOf("agg_") === 0) sizeLbl += " [" + (LABEL[aggGroup] || aggGroup) + "]";
+  ctx.fillText("size: " + sizeLbl, x1 - 150, yTop);
+  var lo2, mid2, hi2;
+  if (sv === "count"){ lo2 = countMin; mid2 = (countMin + countMax) / 2; hi2 = countMax; }
+  else if (sv === "occ"){ lo2 = 0; mid2 = occMax / 2; hi2 = occMax; }
+  else { lo2 = aggMin; mid2 = (aggMin + aggMax) / 2; hi2 = aggMax; }
+  var vals = [lo2, mid2, hi2];
+  for (var i = 0; i < 3; i++){
+    var fake = (sv === "count") ? {count: vals[i], occ: 0}
+            : (sv === "occ") ? {count: 0, occ: vals[i]}
+            : {count: 0, occ: 0, __aggVal: vals[i]};
+    ctx.globalAlpha = 0.6; ctx.fillStyle = "#9ab0c8";
+    ctx.beginPath(); ctx.arc(x1 - 138 + i * 46, yTop + 18, sizeOf(fake), 0, 6.2832); ctx.fill();
+    ctx.globalAlpha = 1; ctx.fillStyle = "#8a93a3";
+    ctx.fillText(String(Math.round(vals[i])), x1 - 148 + i * 46, yTop + 38);
+  }
+  return 52;
+}
+
 function drawLegend(x1){
   var v = $("selC").value;
   var y = 24, i;
   ctx.font = "11px system-ui"; ctx.textAlign = "left";
   if (!v){
-    var sv = $("selS").value;
-    if (sv === "const") return;
-    ctx.fillStyle = "#aeb7c6"; ctx.fillText("size: " + LABEL[sv], x1 - 150, y);
-    var vals = (sv === "count") ? [countMin, (countMin + countMax) / 2, countMax] : [0, occMax / 2, occMax];
-    for (i = 0; i < 3; i++){
-      var fake = (sv === "count") ? {count: vals[i], occ: 0} : {count: 0, occ: vals[i]};
-      ctx.globalAlpha = 0.6; ctx.fillStyle = "#9ab0c8";
-      ctx.beginPath(); ctx.arc(x1 - 138 + i * 46, 42, sizeOf(fake), 0, 6.2832); ctx.fill();
-      ctx.globalAlpha = 1; ctx.fillStyle = "#8a93a3";
-      ctx.fillText(String(Math.round(vals[i])), x1 - 148 + i * 46, 62);
-    }
+    drawSizeLegend(x1, 24, true);
     return;
   }
   if (v === "count"){
@@ -530,6 +707,7 @@ function drawLegend(x1){
     ctx.fillText(String(countMax), x1 - 10, y + 24);
     ctx.textAlign = "left";
     ctx.fillStyle = "#aeb7c6"; ctx.fillText("count", x1 - 150, y - 6);
+    drawSizeLegend(x1, 24 + 58, true);
     return;
   }
   var freq = {}, x, key;
@@ -541,8 +719,9 @@ function drawLegend(x1){
   }
   var keys = Object.keys(freq).sort(function(a,b){ return freq[b] - freq[a]; });
   var shown = Math.min(12, keys.length);
-  /* backing panel keeps legend text legible over dense points */
-  var lH = 22 + shown * 15 + ((keys.length > shown) ? 16 : 0);
+  /* backing panel covers legend text + (optional) size legend below it */
+  var lH = 22 + shown * 15 + ((keys.length > shown) ? 16 : 0)
+          + (($("selS").value !== "const") ? 56 : 0);
   ctx.fillStyle = "rgba(20,23,28,0.82)";
   ctx.fillRect(x1 - 154, y - 16, 154, lH);
   ctx.fillStyle = "#aeb7c6"; ctx.fillText(LABEL[v] || v, x1 - 150, y - 6);
@@ -557,11 +736,15 @@ function drawLegend(x1){
     ctx.fillStyle = "#6b7686";
     ctx.fillText("+" + (keys.length - shown) + " more", x1 - 150, y + 12 + shown * 15);
   }
+  if ($("selS").value !== "const"){
+    drawSizeLegend(x1, y + 12 + shown * 15 + ((keys.length > shown) ? 16 : 0) + 8, false);
+  }
 }
 
 function updStatus(){
   $("status").textContent = drawn.length + " pts" + (capped ? " (capped)" : "") +
-    " | tallies " + data.entries.length + " entries, raw " + data.raw.length + " recs";
+    " | tallies " + data.entries.length + " entries, raw " + data.raw.length + " recs" +
+    ((zoomX || zoomY) ? " | zoomed (dbl-click to reset)" : "");
 }
 
 function hitTest(mx, my){
@@ -575,13 +758,106 @@ function hitTest(mx, my){
   return (bd <= 81) ? best : null;
 }
 
+/* ---- brush-zoom: drag a rectangle on the chart ---- */
+var brushing = null, dragMoved = false;
+function drawBrush(){
+  var el = $("brush");
+  if (!brushing){ el.style.display = "none"; return; }
+  var b = brushing;
+  el.style.display = "block";
+  el.style.left = Math.min(b.x0, b.x1) + "px";
+  el.style.top = Math.min(b.y0, b.y1) + "px";
+  el.style.width = Math.abs(b.x1 - b.x0) + "px";
+  el.style.height = Math.abs(b.y1 - b.y0) + "px";
+}
+function applyBrushZoom(b){
+  if (!lastScaleX || !lastScaleY || !lastPlot) return;
+  var px0 = Math.max(Math.min(b.x0, b.x1), lastPlot.x0);
+  var px1 = Math.min(Math.max(b.x0, b.x1), lastPlot.x1);
+  var py0 = Math.max(Math.min(b.y0, b.y1), lastPlot.y0);
+  var py1 = Math.min(Math.max(b.y0, b.y1), lastPlot.y1);
+  var i, c;
+  if (lastScaleX.lanes){
+    var lanesX = [];
+    for (i = 0; i < lastScaleX.lanes.length; i++){
+      c = lastScaleX.p0 + lastScaleX.lane * (i + 0.5);
+      if (c >= px0 && c <= px1) lanesX.push(lastScaleX.lanes[i]);
+    }
+    if (lanesX.length) zoomX = { v: $("selX").value, lanes: lanesX };
+  } else if (lastScaleX.inv){
+    var vx0 = lastScaleX.inv(px0), vx1 = lastScaleX.inv(px1);
+    if (!isNaN(vx0) && !isNaN(vx1)) zoomX = { v: $("selX").value, lo: Math.min(vx0, vx1), hi: Math.max(vx0, vx1) };
+  }
+  if (lastScaleY.lanes){
+    var lanesY = [];
+    for (i = 0; i < lastScaleY.lanes.length; i++){
+      c = lastScaleY.p0 + lastScaleY.lane * (i + 0.5);
+      if (c >= py0 && c <= py1) lanesY.push(lastScaleY.lanes[i]);
+    }
+    if (lanesY.length) zoomY = { v: $("selY").value, lanes: lanesY };
+  } else if (lastScaleY.inv){
+    var vy0 = lastScaleY.inv(py0), vy1 = lastScaleY.inv(py1);
+    if (!isNaN(vy0) && !isNaN(vy1)) zoomY = { v: $("selY").value, lo: Math.min(vy0, vy1), hi: Math.max(vy0, vy1) };
+  }
+  redrawFromPoints();
+}
+function resetZoom(){
+  if (!zoomX && !zoomY) return;
+  zoomX = zoomY = null;
+  redrawFromPoints();
+}
+function resetFilters(){
+  ["fSrc", "fDst", "fSrcNot", "fDstNot", "fPortIn", "fPortNot"].forEach(function(id){ $(id).value = ""; });
+  $("fMin").value = "0";
+  $("fType").value = "both";
+  $("fDs").value = "both";
+  ["chkDirInt", "chkDirOut", "chkDirIn", "chkDirOth"].forEach(function(id){ $(id).checked = true; });
+  $("fFrom").value = "";
+  $("fTo").value = "";
+  $("fCap").value = "40000";
+  /* encodings too: this is "restore the default view" in full */
+  $("selX").value = "ts";
+  $("selY").value = "dpt";
+  $("selYS").value = "linear";
+  $("chkFlipY").checked = false;
+  $("selC").value = "src";
+  $("selS").value = "count";
+  zoomX = zoomY = null;
+  clearFitCaches();
+  redrawFromPoints();
+}
+function toggleHelp(){
+  var el = $("helpPanel");
+  el.style.display = (el.style.display === "flex") ? "none" : "flex";
+}
+
+canvas.addEventListener("mousedown", function(ev){
+  if (ev.button !== 0) return;                    // left button only
+  brushing = { x0: ev.offsetX, y0: ev.offsetY, x1: ev.offsetX, y1: ev.offsetY };
+  dragMoved = false;
+});
 canvas.addEventListener("mousemove", function(ev){
+  if (brushing){
+    brushing.x1 = ev.offsetX; brushing.y1 = ev.offsetY;
+    if (Math.abs(brushing.x1 - brushing.x0) > 3 || Math.abs(brushing.y1 - brushing.y0) > 3){
+      dragMoved = true;
+      tip.style.display = "none";
+      drawBrush();
+    }
+    return;
+  }
   var h = hitTest(ev.offsetX, ev.offsetY);
   if (!h){ tip.style.display = "none"; return; }
   var p = h.p;
+  var svv = $("selS").value;
+  var sizeNote = "";
+  if (svv.indexOf("agg_") === 0){
+    var kk = colorKey(aggGroup, (p[aggGroup] === null || p[aggGroup] === undefined) ? "-" : p[aggGroup]);
+    sizeNote = "<br>" + (aggVals[kk] || 0) + " " + (LABEL[svv] || svv);
+  }
   tip.innerHTML = "<b>" + escapeHtml(p.label) + "</b><br>" +
     escapeHtml(p.type) + " | " + escapeHtml(p.ds) + " | count " + p.count +
-    " | sev " + sevName(p.sev) + " | " + escapeHtml(p.dir || "other") + "<br>" +
+    " | sev " + sevName(p.sev) + " | " + escapeHtml(p.dir || "other") + sizeNote + "<br>" +
     "src " + escapeHtml(p.src || "-") + " &rarr; dst " + escapeHtml(p.dst || "-") +
     " " + protoName(p.proto) + "/" + ((p.dpt == null) ? "-" : p.dpt) + "<br>" +
     "at " + escapeHtml(String(p.ts).slice(0, 23)) +
@@ -594,12 +870,36 @@ canvas.addEventListener("mousemove", function(ev){
   tip.style.left = x + "px";
   tip.style.top = y + "px";
 });
-canvas.addEventListener("mouseleave", function(){ tip.style.display = "none"; });
+canvas.addEventListener("mouseup", function(){
+  if (!brushing) return;
+  var b = brushing;
+  brushing = null;
+  drawBrush();
+  if (!dragMoved) return;
+  if (Math.abs(b.x1 - b.x0) < 14 || Math.abs(b.y1 - b.y0) < 14) return;
+  applyBrushZoom(b);
+});
+canvas.addEventListener("mouseleave", function(){
+  if (brushing){ brushing = null; drawBrush(); }
+  tip.style.display = "none";
+});
+canvas.addEventListener("dblclick", function(){
+  $("detail").style.display = "none";   // first click of the pair may have opened it
+  resetZoom();
+});
 canvas.addEventListener("click", function(ev){
+  if (dragMoved){ dragMoved = false; return; }
   var h = hitTest(ev.offsetX, ev.offsetY);
   if (!h) return;
   $("detailBody").textContent = JSON.stringify(h.p.ref, null, 2);
   $("detail").style.display = "block";
+});
+window.addEventListener("keydown", function(ev){
+  if (ev.key === "Escape"){
+    var hp = $("helpPanel");
+    if (hp.style.display === "flex"){ hp.style.display = "none"; return; }
+    resetZoom();
+  }
 });
 
 function redrawFromPoints(){
@@ -626,16 +926,19 @@ function refresh(fitAxes){
   });
 }
 
-function controlChange(){ clearFitCaches(); redrawFromPoints(); }
+function controlChange(){ clearFitCaches(); zoomX = zoomY = null; redrawFromPoints(); }
+function filterChange(){ clearFitCaches(); redrawFromPoints(); }
 var deb = null;
-["fSrc", "fDst", "fCap"].forEach(function(id){
+["fSrc", "fDst", "fSrcNot", "fDstNot", "fPortIn", "fPortNot", "fCap"].forEach(function(id){
   $(id).addEventListener("input", function(){
     clearTimeout(deb);
-    deb = setTimeout(controlChange, 350);
+    deb = setTimeout(filterChange, 350);
   });
 });
-["selX", "selY", "selC", "selS", "fMin", "fType", "fDs", "fDir", "fFrom", "fTo",
- "selYS", "chkFlipY"].forEach(function(id){
+["fMin", "fType", "fDs", "chkDirInt", "chkDirOut", "chkDirIn", "chkDirOth", "fFrom", "fTo"].forEach(function(id){
+  $(id).addEventListener("change", filterChange);
+});
+["selX", "selY", "selC", "selS", "selYS", "chkFlipY"].forEach(function(id){
   $(id).addEventListener("change", controlChange);
 });
 window.addEventListener("resize", fit);

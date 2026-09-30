@@ -422,7 +422,8 @@ def main():
             except OSError:
                 time.sleep(0.3)
         ok = (page is not None and "<canvas" in page
-              and "selYS" in page and "chkFlipY" in page and "fDir" in page
+              and "selYS" in page and "chkFlipY" in page and "chkDirOut" in page
+              and "fPortNot" in page and "btnHelp" in page and 'id="brush"' in page
               and api is not None
               and len(api.get("entries", [])) == 1
               and len(api.get("raw", [])) == 3

@@ -17,7 +17,7 @@ Point your Omada device's remote logging at this PC and it will:
 - **Show your traffic in real time** in a browser: interactive
   time-series scatterplot with swappable X/Y axes, color and size
   encodings, log scale, and RFC1918 direction slicing
-  (internal / outbound / inbound)
+  (internal / outbound / inbound / other)
 - **Heal itself**: boot-start scheduled task (no console window), crash
   recovery with exactly-once replay, and a watchdog that restarts the
   receiver if the log ever goes stale
@@ -31,6 +31,8 @@ Zero pip installs - pure Python 3 stdlib and vanilla JS.
 ![Outbound traffic: destinations by count, log-scaled Y axis](docs/img/viz-outbound-log.png)
 
 ![Traffic sliced by RFC1918 direction (inbound lanes appear when external-to-LAN flows are logged)](docs/img/viz-direction.png)
+
+![Brush zoom: drag a rectangle to investigate any cluster](docs/img/viz-zoom.png)
 
 *Captured from a live deployment (~40k rendered points, a full day of traffic);
 addresses sanitized.*
@@ -179,18 +181,25 @@ change):
   dst, dest port, proto, severity, flow/msg, dataset, direction
 - **Y scale**: linear or log (numeric axes), plus a **flip Y** toggle to
   reverse the axis direction
+- **Brush zoom**: drag a rectangle on the chart to zoom into any region
+  (dense clusters become readable); double-click, Esc, or the "reset zoom"
+  button zooms back out. Zoom holds across auto-refreshes.
 - **Color / point size**: src, dst, port, proto, severity, dataset,
-  direction, or count (blue-to-red gradient, log-scaled for even spread)
-- **Direction filter**: every record is classified RFC1918-wise as
-  internal (RFC1918 -> RFC1918), outbound (RFC1918 -> external),
-  inbound (external -> RFC1918) or other - filterable, and usable as an
-  axis or color
+  direction, or count (blue-to-red gradient, log-scaled for even spread).
+  Size also offers **per-group aggregates** - e.g. "distinct ports per
+  group" sizes each dot by how many different services its device talks to
+  (grouping follows the color variable, then the categorical axis).
+- **Precise filtering**: src/dst text match or its negation, dest-port
+  include/exclude lists with ranges (`443, 53, 1000-2000`), RFC1918
+  direction checkboxes in any combination (internal + inbound only, etc.),
+  flow vs msg, dataset, min count, time range, point cap - plus a one-click
+  "reset all".
+- **Built-in help**: hover any control for a one-line explanation, or hit
+  the "?" button for the full how-to guide.
 - Category colors are sticky and assigned by frequency rank, so the largest
   categories always get distinct, evenly-spread colors
-- Filters: src/dst substring, min count, flow vs msg, dataset, direction,
-  time range, point cap
 - Hover for a summary; click a point for the full tally entry
-- Auto-refreshes every 30 s without disturbing the view (colors and axes
+- Auto-refreshes every 30 s without disturbing the view (colors and zoom
   stay stable; time windows slide). Ctrl+C (or close the window) to stop.
   `--host 0.0.0.0` if you ever want to view it from the LAN.
 
