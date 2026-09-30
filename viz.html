@@ -33,8 +33,7 @@
   #barSupport{color:#6b7686;text-decoration:none;font-size:12px;padding-bottom:4px}
   #barSupport:hover{color:#7fd0ff}
   [data-tip]{position:relative}
-  [data-tip]:hover::after{content:attr(data-tip);position:absolute;top:calc(100% + 6px);left:0;z-index:30;background:#1c212b;border:1px solid #3a4254;color:#d7dce3;font:11px/1.5 system-ui;padding:6px 9px;border-radius:6px;white-space:pre-line;width:max-content;max-width:290px;text-align:left;box-shadow:0 4px 14px rgba(0,0,0,.6);pointer-events:none}
-  [data-tip-pos="right"]:hover::after{left:auto;right:0}
+  #ctip{position:fixed;display:none;z-index:35;background:#1c212b;border:1px solid #3a4254;color:#d7dce3;font:11px/1.5 system-ui;padding:6px 9px;border-radius:6px;white-space:pre-line;width:max-content;max-width:290px;text-align:left;box-shadow:0 4px 14px rgba(0,0,0,.6);pointer-events:none}
   .dirgrp{display:flex;gap:8px;align-items:center;padding:2px 0}
   .dl{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#8a93a3;cursor:pointer;white-space:nowrap}
   .dl input{margin:0}
@@ -78,11 +77,11 @@
   <div class="ctl" data-tip="Time window end (local time)."><label>to</label><input id="fTo" type="datetime-local"></div>
   <div class="ctl" data-tip="Maximum dots drawn at once (busiest kept first when exceeded). Lower it if the page feels slow."><label>point cap</label><input id="fCap" type="number" value="40000" style="width:76px"></div>
   <div class="ctl" data-tip="Refetch data every 30 s. Colors and zoom stay put; the time window slides forward quietly."><label>auto 30s</label><input id="chkAuto" type="checkbox" checked style="margin-top:4px"></div>
-  <button id="btnGo" onclick="refresh(true)" data-tip-pos="right" data-tip="Refetch the data and re-fit the axes to everything visible. An active brush zoom keeps its window - use reset zoom to unzoom.">refresh</button>
-  <button id="btnZoom" onclick="resetZoom()" data-tip-pos="right" data-tip="Undo the drag-zoom and show everything again. Double-clicking the chart does the same.">reset zoom</button>
-  <button id="btnReset" onclick="resetFilters()" data-tip-pos="right" data-tip="Clear every filter, un-zoom, and restore the default view.">reset all</button>
-  <button id="btnHelp" onclick="toggleHelp()" data-tip-pos="right" data-tip="Open the how-to guide (Esc closes it)." style="font-weight:800">?</button>
-  <a id="barSupport" data-tip-pos="right" href="https://www.paypal.me/LBallek" target="_blank" rel="noopener noreferrer" title="Support this project - PayPal, Venmo @lucas-ballek, Cash App $luball">Support</a>
+  <button id="btnGo" onclick="refresh(true)" data-tip="Refetch the data and re-fit the axes to everything visible. An active brush zoom keeps its window - use reset zoom to unzoom.">refresh</button>
+  <button id="btnZoom" onclick="resetZoom()" data-tip="Undo the drag-zoom and show everything again. Double-clicking the chart does the same.">reset zoom</button>
+  <button id="btnReset" onclick="resetFilters()" data-tip="Clear every filter, un-zoom, and restore the default view.">reset all</button>
+  <button id="btnHelp" onclick="toggleHelp()" data-tip="Open the how-to guide (Esc closes it)." style="font-weight:800">?</button>
+  <a id="barSupport" href="https://www.paypal.me/LBallek" target="_blank" rel="noopener noreferrer" data-tip="Support this project - PayPal, Venmo @lucas-ballek, Cash App $luball">Support</a>
   <div id="status">loading...</div>
 </div>
 <div id="wrap"><canvas id="plot"></canvas><div id="tip"></div><div id="brush"></div><div id="supportRibbon">
@@ -97,6 +96,7 @@
   <span class="sup-hint">PayPal &middot; @lucas-ballek &middot; $luball</span>
 </div></div>
 <div id="detail" ondblclick="this.style.display='none'"><button onclick="document.getElementById('detail').style.display='none'">close</button><h3>entry</h3><pre id="detailBody"></pre></div>
+<div id="ctip"></div>
 <div id="helpPanel" onclick="if(event.target===this)toggleHelp()"><div class="hp-card">
   <button class="hp-x" onclick="toggleHelp()">close</button>
   <h3>Driving the dashboard</h3>
@@ -992,6 +992,37 @@ function dismissSupport(){
 try {
   if (!localStorage.getItem("omada_support_ok")) $("supportRibbon").style.display = "block";
 } catch (e) {}
+
+/* shared control tooltip: clamped to the viewport on BOTH axes so it can
+   never be clipped by window edges, no matter how the bar wraps */
+(function(){
+  var ctip = $("ctip");
+  var hideCtip = function(){ ctip.style.display = "none"; };
+  var showCtip = function(el){
+    var txt = el.getAttribute("data-tip");
+    if (!txt){ hideCtip(); return; }
+    ctip.textContent = txt;
+    ctip.style.display = "block";
+    var r = el.getBoundingClientRect();
+    var tw = ctip.offsetWidth, th = ctip.offsetHeight;
+    var x = clampPx(r.left + r.width / 2 - tw / 2, 4, window.innerWidth - tw - 4);
+    var y = r.bottom + 6;
+    if (y + th > window.innerHeight - 4) y = r.top - th - 6;  // flip above
+    if (y < 4) y = 4;
+    ctip.style.left = x + "px";
+    ctip.style.top = y + "px";
+  };
+  $("bar").addEventListener("mouseover", function(ev){
+    var el = null, node = ev.target;
+    while (node && node !== this){
+      if (node.getAttribute && node.getAttribute("data-tip")) { el = node; break; }
+      node = node.parentNode;
+    }
+    if (el) showCtip(el); else hideCtip();
+  });
+  $("bar").addEventListener("mouseleave", hideCtip);
+  window.addEventListener("resize", hideCtip);
+})();
 
 fit();
 refresh(true);
