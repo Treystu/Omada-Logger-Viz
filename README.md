@@ -32,6 +32,8 @@ Zero pip installs - pure Python 3 stdlib and vanilla JS.
 
 ![Traffic sliced by RFC1918 direction (inbound lanes appear when external-to-LAN flows are logged)](docs/img/viz-direction.png)
 
+![Brush zoom: drag a rectangle to investigate any cluster](docs/img/viz-zoom.png)
+
 *Captured from a live deployment (~40k rendered points, a full day of traffic);
 addresses sanitized.*
 

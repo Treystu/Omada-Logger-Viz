@@ -172,15 +172,20 @@
     </div>
     <div class="card">
       <h3>Visualize live</h3>
-      <p>An interactive time-series scatterplot on localhost: swappable
-      X/Y axes, color and size encodings, log scale, and RFC1918 direction
-      slicing &mdash; internal, outbound, inbound. Hover for details, click
-      for the full tally. Auto-refreshes without disturbing your view.</p>
+      <p>An interactive scatterplot on localhost: swappable X/Y axes,
+      color and size encodings, log scale, RFC1918 direction slicing
+      (internal / outbound / inbound / other), drag-to-zoom on any region,
+      per-group aggregate sizing, and built-in hover help on every control.
+      Auto-refreshes without disturbing your view.</p>
     </div>
   </div>
   <div class="shot">
     <img src="./img/viz-direction.png" alt="Traffic sliced by RFC1918 direction: internal, outbound, inbound" width="1600" height="900">
     <p class="cap">Traffic sliced by direction &mdash; internal vs outbound at a glance; an inbound lane appears whenever external-to-LAN flows are logged.</p>
+  </div>
+  <div class="shot">
+    <img src="./img/viz-zoom.png" alt="Brush-zoomed view of a dense traffic cluster" width="1600" height="900">
+    <p class="cap">Drag to zoom &mdash; brush any region and dense clusters become readable; double-click or Esc zooms back out.</p>
   </div>
 </section>
 
