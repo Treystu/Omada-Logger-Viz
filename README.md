@@ -34,6 +34,8 @@ Zero pip installs - pure Python 3 stdlib and vanilla JS.
 
 ![Brush zoom: drag a rectangle to investigate any cluster](docs/img/viz-zoom.png)
 
+![Pattern spotlight: click a dot to grey the noise and pop related traffic](docs/img/viz-spotlight.png)
+
 *Captured from a live deployment (~40k rendered points, a full day of traffic);
 addresses sanitized.*
 
@@ -198,6 +200,10 @@ change):
   "reset all".
 - **Built-in help**: hover any control for a one-line explanation, or hit
   the "?" button for the full how-to guide.
+- **Pattern spotlight**: click any dot to grey the noise and pop its related
+  traffic - the same conversation (white-ringed), the same host pair, and
+  the same service - making patterns visible at a glance. Esc or an empty
+  click clears it.
 - Category colors are sticky and assigned by frequency rank, so the largest
   categories always get distinct, evenly-spread colors
 - Hover for a summary; click a point for the full tally entry

@@ -121,6 +121,8 @@
   </ul>
   <h4>Encodings</h4>
   <p>X / Y position, color and size can each be set to any aspect: time, source, destination, port, protocol, severity, direction, counts. Size also offers <b>per-group aggregates</b> - e.g. "distinct ports per group" sizes each dot by how many different services its device talks to (grouping follows the color variable, then the categorical axis). Records and flows per group act as traffic-quantity proxies - Omada's remote log doesn't include byte or packet totals.</p>
+  <h4>Spotlight related traffic</h4>
+  <p><b>Click any dot</b> to spotlight its related traffic: the exact same conversation is highlighted with a white ring, the same host pair stays bright, and traffic to the same service stays visible at reduced intensity - everything else greys out. The status bar shows the counts; the top-left legend explains the levels. Click empty space or press <b>Esc</b> to clear. The spotlight persists across zooms, filters, and auto-refreshes.</p>
   <h4>Points</h4>
   <p><b>Hover</b> a dot for a summary; <b>click</b> it for the full tally entry. Each dot is one known occurrence (tallies) or one raw record.</p>
   <h4>Refresh</h4>
@@ -193,6 +195,11 @@ var zoomX = null, zoomY = null;
 var lastScaleX = null, lastScaleY = null, lastPlot = null;
 /* per-group size aggregates (see computeAggregates) */
 var aggGroup = "src", aggVals = {}, aggMin = 0, aggMax = 1;
+/* pattern spotlight: clicking a point greys the rest and pops its related
+   traffic - same conversation (white-ringed, full color) > same host pair
+   (full color) > same service (reduced intensity). Esc / empty click clears. */
+var related = null;                 // pattern snapshot of the clicked point
+var relatedStats = { flow: 0, pair: 0, svc: 0 };
 
 function buildAllPoints(){
   var pts = [], i, k, ts;
@@ -655,6 +662,9 @@ function draw(){
   ctx.fillText("Y: " + (LABEL[Yv] || Yv), 0, 0);
   ctx.restore();
 
+  var relMode = related !== null;
+  relatedStats = { flow: 0, pair: 0, svc: 0 };
+  var popList = [];
   for (i = 0; i < points.length; i++){
     var p = points[i];
     var vx = p[Xv], vy = p[Yv];
@@ -663,13 +673,43 @@ function draw(){
     if (px === null || py === null) continue;
     /* NaN-safe clip: fails closed on non-finite coordinates */
     if (!(px >= x0 - 4 && px <= x1 + 4 && py >= y0 - 4 && py <= y1 + 4)) continue;
-    ctx.globalAlpha = 0.6;
-    ctx.fillStyle = colorOf(p);
+    if (relMode){
+      var lvl = relationOf(p);
+      if (lvl > 0){
+        if (lvl === 3) relatedStats.flow++;
+        else if (lvl === 2) relatedStats.pair++;
+        else relatedStats.svc++;
+        popList.push([p, px, py, lvl]);
+        drawn.push({ p: p, x: px, y: py });
+        continue;                       // related drawn on top in pass 2
+      }
+      ctx.globalAlpha = 0.12;            // non-related: quiet grey
+      ctx.fillStyle = "#5a6373";
+    } else {
+      ctx.globalAlpha = 0.6;
+      ctx.fillStyle = colorOf(p);
+    }
     ctx.beginPath(); ctx.arc(px, py, sizeOf(p), 0, 6.2832); ctx.fill();
     drawn.push({ p: p, x: px, y: py });
   }
+  if (relMode){
+    for (i = 0; i < popList.length; i++){
+      var q = popList[i];
+      ctx.globalAlpha = (q[3] === 1) ? 0.6 : 1.0;   // same service: reduced pop
+      ctx.fillStyle = colorOf(q[0]);
+      ctx.beginPath(); ctx.arc(q[1], q[2], sizeOf(q[0]), 0, 6.2832); ctx.fill();
+      if (q[3] === 3){                              // same conversation: white ring
+        ctx.globalAlpha = 1.0;
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(q[1], q[2], sizeOf(q[0]) + 2.5, 0, 6.2832); ctx.stroke();
+      }
+    }
+    ctx.lineWidth = 1;
+  }
   ctx.globalAlpha = 1;
   drawLegend(x1);
+  if (relMode) drawSpotlightLegend();
   buildHitGrid();
   updStatus();
 }
@@ -756,10 +796,61 @@ function drawLegend(x1){
   }
 }
 
+function drawSpotlightLegend(){
+  var bx = lastPlot.x0 + 8, by = lastPlot.y0 + 8, i;
+  ctx.font = "11px system-ui"; ctx.textAlign = "left";
+  var rows = [
+    ["#e6ebf2", 1.0, true,  "same conversation", relatedStats.flow],
+    ["#e6ebf2", 1.0, false, "same host pair", relatedStats.pair],
+    ["#e6ebf2", 0.6, false, "same service", relatedStats.svc],
+    ["#5a6373", 0.12, false, "other traffic", 0]
+  ];
+  ctx.fillStyle = "rgba(20,23,28,0.85)";
+  ctx.fillRect(bx, by, 186, 16 + rows.length * 15 + 8);
+  ctx.fillStyle = "#aeb7c6";
+  ctx.fillText("spotlight", bx + 6, by + 14);
+  for (i = 0; i < rows.length; i++){
+    var yy = by + 28 + i * 15;
+    ctx.globalAlpha = rows[i][1];
+    ctx.fillStyle = rows[i][0];
+    ctx.beginPath(); ctx.arc(bx + 12, yy - 4, 3.2, 0, 6.2832); ctx.fill();
+    if (rows[i][2]){
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(bx + 12, yy - 4, 5.6, 0, 6.2832); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1;
+    ctx.fillStyle = "#8a93a3";
+    ctx.fillText(rows[i][3] + (rows[i][4] ? " (" + rows[i][4] + ")" : ""), bx + 24, yy);
+  }
+}
+
 function updStatus(){
+  var rel = related ? (" | related: " + (relatedStats.flow + relatedStats.pair + relatedStats.svc) +
+    " (same flow " + relatedStats.flow + ", pair " + relatedStats.pair +
+    ", service " + relatedStats.svc + ")") : "";
   $("status").textContent = drawn.length + " pts" + (capped ? " (capped)" : "") +
     " | tallies " + data.entries.length + " entries, raw " + data.raw.length + " recs" +
-    ((zoomX || zoomY) ? " | zoomed (dbl-click to reset)" : "");
+    ((zoomX || zoomY) ? " | zoomed (dbl-click to reset)" : "") + rel;
+}
+
+function relationOf(p){
+  if (!related) return 0;
+  if (related.type === "msg"){
+    if (p.type !== "msg") return 0;
+    if (p.src === related.src && p.label === related.label) return 3;
+    if (p.src === related.src) return 2;
+    if (p.label === related.label) return 1;
+    return 0;
+  }
+  if (p.type !== "flow") return 0;
+  if (p.src === related.src && p.dst === related.dst &&
+      p.proto === related.proto && p.dpt === related.dpt) return 3;
+  if (p.src === related.src && p.dst === related.dst) return 2;
+  if (p.dst === related.dst && p.dpt === related.dpt) return 1;
+  return 0;
 }
 
 var hitGrid = null;
@@ -866,6 +957,7 @@ function resetFilters(){
   $("chkFlipY").checked = false;
   $("selC").value = "src";
   $("selS").value = "count";
+  related = null;
   zoomX = zoomY = null;
   clearFitCaches();
   redrawFromPoints();
@@ -970,8 +1062,15 @@ canvas.addEventListener("dblclick", function(){
 canvas.addEventListener("click", function(ev){
   if (dragMoved){ dragMoved = false; return; }
   var h = hitTest(ev.offsetX, ev.offsetY);
-  if (!h) return;
-  $("detailBody").textContent = JSON.stringify(h.p.ref, null, 2);
+  if (!h){
+    if (related){ related = null; draw(); }   // empty click clears the spotlight
+    return;
+  }
+  var p = h.p;
+  related = { src: p.src, dst: p.dst, proto: p.proto, dpt: p.dpt,
+              type: p.type, label: p.label };
+  draw();                                     // re-render with the spotlight
+  $("detailBody").textContent = JSON.stringify(p.ref, null, 2);
   $("detail").style.display = "block";
 });
 window.addEventListener("keydown", function(ev){
@@ -980,6 +1079,7 @@ window.addEventListener("keydown", function(ev){
     var hp = $("helpPanel");
     if (hp.style.display === "flex"){ hp.style.display = "none"; return; }
     if ($("supportMenu").style.display === "flex"){ toggleSupportMenu(false); return; }
+    if (related){ related = null; draw(); return; }          // clear spotlight
     resetZoom();
   }
 });
