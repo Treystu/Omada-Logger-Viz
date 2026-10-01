@@ -188,7 +188,9 @@ change):
   direction, or count (blue-to-red gradient, log-scaled for even spread).
   Size also offers **per-group aggregates** - e.g. "distinct ports per
   group" sizes each dot by how many different services its device talks to
-  (grouping follows the color variable, then the categorical axis).
+  (grouping follows the color variable, then the categorical axis). Records
+  and flows per group act as traffic-quantity proxies - Omada's remote log
+  doesn't include byte or packet totals.
 - **Precise filtering**: src/dst text match or its negation, dest-port
   include/exclude lists with ranges (`443, 53, 1000-2000`), RFC1918
   direction checkboxes in any combination (internal + inbound only, etc.),
