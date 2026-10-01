@@ -33,6 +33,10 @@
   #barSupport{color:#6b7686;text-decoration:none;font-size:12px;padding-bottom:4px}
   #barSupport:hover{color:#7fd0ff}
   #ctip{position:fixed;display:none;z-index:35;background:#1c212b;border:1px solid #3a4254;color:#d7dce3;font:11px/1.5 system-ui;padding:6px 9px;border-radius:6px;white-space:pre-line;width:max-content;max-width:290px;text-align:left;box-shadow:0 4px 14px rgba(0,0,0,.6);pointer-events:none}
+  #supportMenu{position:fixed;display:none;z-index:38;background:#1c212b;border:1px solid #3a4254;border-radius:8px;padding:10px 12px;flex-direction:column;gap:6px;box-shadow:0 6px 20px rgba(0,0,0,.55)}
+  #supportMenu .sm-title{font-size:11px;color:#8a93a3;letter-spacing:.04em;text-transform:uppercase}
+  #supportMenu .sm-link{display:block;background:#222733;color:#e6ebf2;border:1px solid #343b4a;border-radius:4px;padding:5px 12px;text-decoration:none;font-size:12px;white-space:nowrap}
+  #supportMenu .sm-link:hover{background:#2b4a6f;border-color:#3d5f8f}
   .dirgrp{display:flex;gap:8px;align-items:center;padding:2px 0}
   .dl{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#8a93a3;cursor:pointer;white-space:nowrap}
   .dl input{margin:0}
@@ -54,7 +58,7 @@
   <div class="ctl" data-tip="Numeric Y axes: linear spacing, or log (great for skewed counts or port numbers)."><label>Y scale</label><select id="selYS"><option value="linear">linear</option><option value="log">log</option></select></div>
   <div class="ctl" data-tip="Flip the vertical axis direction (top-down instead of bottom-up)."><label>flip Y</label><input id="chkFlipY" type="checkbox" style="margin-top:4px"></div>
   <div class="ctl" data-tip="Dot color by category (stable palette - the busiest categories always get distinct colors) or by count on a blue-to-red gradient."><label>Color</label><select id="selC"></select></div>
-  <div class="ctl" data-tip="Dot size. The 'per group' options aggregate over the color/axis category - e.g. with grouping by src, 'distinct ports per group' sizes each dot by how many different services its device talks to."><label>Size</label><select id="selS"></select></div>
+  <div class="ctl" data-tip="Dot size. The 'per group' options aggregate over the color/axis category - e.g. with grouping by src, 'distinct ports per group' sizes each dot by how many different services its device talks to. Records and flows are the traffic-quantity measures - Omada's remote log doesn't include byte or packet totals."><label>Size</label><select id="selS"></select></div>
   <div class="ctl" data-tip="Show only records whose source IP contains this text (substring match)."><label>src contains</label><input id="fSrc" size="10" placeholder="192.0.2.10"></div>
   <div class="ctl" data-tip="Hide records whose source IP contains this text."><label>src not</label><input id="fSrcNot" size="10" placeholder="192.0.2.99"></div>
   <div class="ctl" data-tip="Show only records whose destination IP contains this text."><label>dst contains</label><input id="fDst" size="10" placeholder="198.51.100.20"></div>
@@ -80,7 +84,7 @@
   <button id="btnZoom" onclick="resetZoom()" data-tip="Undo the drag-zoom and show everything again. Double-clicking the chart does the same.">reset zoom</button>
   <button id="btnReset" onclick="resetFilters()" data-tip="Clear every filter, un-zoom, and restore the default view.">reset all</button>
   <button id="btnHelp" onclick="toggleHelp()" data-tip="Open the how-to guide (Esc closes it)." style="font-weight:800">?</button>
-  <a id="barSupport" href="https://www.paypal.me/LBallek" target="_blank" rel="noopener noreferrer" data-tip="Support this project - PayPal, Venmo @lucas-ballek, Cash App $luball">Support</a>
+  <a id="barSupport" href="#">Support</a>
   <div id="status">loading...</div>
 </div>
 <div id="wrap"><canvas id="plot"></canvas><div id="tip"></div><div id="brush"></div><div id="supportRibbon">
@@ -96,6 +100,12 @@
 </div></div>
 <div id="detail" ondblclick="this.style.display='none'"><button onclick="document.getElementById('detail').style.display='none'">close</button><h3>entry</h3><pre id="detailBody"></pre></div>
 <div id="ctip"></div>
+<div id="supportMenu">
+  <div class="sm-title">Support this tool</div>
+  <a class="sm-link" href="https://www.paypal.me/LBallek" target="_blank" rel="noopener noreferrer" onclick="toggleSupportMenu(false)">PayPal</a>
+  <a class="sm-link" href="https://venmo.com/u/lucas-ballek" target="_blank" rel="noopener noreferrer" onclick="toggleSupportMenu(false)">Venmo &mdash; @lucas-ballek</a>
+  <a class="sm-link" href="https://cash.app/$luball" target="_blank" rel="noopener noreferrer" onclick="toggleSupportMenu(false)">Cash App &mdash; $luball</a>
+</div>
 <div id="helpPanel" onclick="if(event.target===this)toggleHelp()"><div class="hp-card">
   <button class="hp-x" onclick="toggleHelp()">close</button>
   <h3>Driving the dashboard</h3>
@@ -110,7 +120,7 @@
     <li><b>from / to</b> - time window; <b>min count</b> - busiest tallies only.</li>
   </ul>
   <h4>Encodings</h4>
-  <p>X / Y position, color and size can each be set to any aspect: time, source, destination, port, protocol, severity, direction, counts. Size also offers <b>per-group aggregates</b> - e.g. "distinct ports per group" sizes each dot by how many different services its device talks to (grouping follows the color variable, then the categorical axis).</p>
+  <p>X / Y position, color and size can each be set to any aspect: time, source, destination, port, protocol, severity, direction, counts. Size also offers <b>per-group aggregates</b> - e.g. "distinct ports per group" sizes each dot by how many different services its device talks to (grouping follows the color variable, then the categorical axis). Records and flows per group act as traffic-quantity proxies - Omada's remote log doesn't include byte or packet totals.</p>
   <h4>Points</h4>
   <p><b>Hover</b> a dot for a summary; <b>click</b> it for the full tally entry. Each dot is one known occurrence (tallies) or one raw record.</p>
   <h4>Refresh</h4>
@@ -121,11 +131,11 @@
 "use strict";
 var AXES = ["ts","first","last","count","src","dst","dpt","proto","sev","type","ds","dir"];
 var COLORVARS = ["","src","dst","dpt","proto","sev","type","ds","dir","count"];
-var SIZEVARS = ["const","count","occ","agg_rec","agg_dpt","agg_dst","agg_days"];
+var SIZEVARS = ["const","count","occ","agg_rec","agg_flows","agg_dpt","agg_dst","agg_days"];
 var LABEL = {ts:"time",first:"first seen",last:"last seen",count:"count",src:"src",dst:"dst",
   dpt:"dest port",proto:"proto",sev:"severity",type:"flow/msg",ds:"dataset",
   dir:"direction","":"none",const:"constant",occ:"# occurrences",
-  agg_rec:"records per group",agg_dpt:"distinct ports per group",
+  agg_rec:"records per group",agg_flows:"flows per group",agg_dpt:"distinct ports per group",
   agg_dst:"distinct dests per group",agg_days:"active days per group"};
 var TIMEK = {ts:1,first:1,last:1};
 var SEVN = ["emerg","alert","crit","err","warning","notice","info","debug"];
@@ -296,11 +306,13 @@ function computeAggregates(){
   var sv = $("selS").value;
   if (sv.indexOf("agg_") !== 0) return;
   aggGroup = sizeGroupVar();
-  var rec = {}, dpts = {}, dsts = {}, days = {}, i, p, k;
+  var rec = {}, flows = {}, dpts = {}, dsts = {}, days = {}, i, p, k;
   for (i = 0; i < points.length; i++){
     p = points[i];
     k = colorKey(aggGroup, (p[aggGroup] === null || p[aggGroup] === undefined) ? "-" : p[aggGroup]);
     rec[k] = (rec[k] || 0) + (p.count || 0);
+    flows[k] = flows[k] || {};
+    flows[k][(p.src || "-") + "|" + (p.dst || "-") + "|" + ((p.dpt === null || p.dpt === undefined) ? "-" : p.dpt)] = 1;
     if (p.dpt !== null && p.dpt !== undefined){ dpts[k] = dpts[k] || {}; dpts[k][p.dpt] = 1; }
     if (p.dst){ dsts[k] = dsts[k] || {}; dsts[k][p.dst] = 1; }
     days[k] = days[k] || {}; days[k][String(p.ts).slice(0, 10)] = 1;
@@ -309,6 +321,7 @@ function computeAggregates(){
   for (k in rec){
     var v2;
     if (sv === "agg_rec") v2 = rec[k];
+    else if (sv === "agg_flows") v2 = Object.keys(flows[k] || {}).length;
     else if (sv === "agg_dpt") v2 = Object.keys(dpts[k] || {}).length;
     else if (sv === "agg_dst") v2 = Object.keys(dsts[k] || {}).length;
     else v2 = Object.keys(days[k] || {}).length;
@@ -861,6 +874,35 @@ function toggleHelp(){
   var el = $("helpPanel");
   el.style.display = (el.style.display === "flex") ? "none" : "flex";
 }
+function toggleSupportMenu(force){
+  var el = $("supportMenu");
+  var show = (force !== undefined) ? force : (el.style.display !== "flex");
+  if (show){
+    el.style.display = "flex";
+    var r = $("barSupport").getBoundingClientRect();
+    var w2 = el.offsetWidth, h2 = el.offsetHeight;
+    var x = clampPx(r.left + r.width / 2 - w2 / 2, 4, window.innerWidth - w2 - 4);
+    var y = r.bottom + 6;
+    if (y + h2 > window.innerHeight - 4) y = r.top - h2 - 6;
+    if (y < 4) y = 4;
+    el.style.left = x + "px";
+    el.style.top = y + "px";
+  } else {
+    el.style.display = "none";
+  }
+}
+document.addEventListener("click", function(ev){
+  var t = ev.target;
+  var onAnchor = (t.id === "barSupport" ||
+                  (t.parentNode && t.parentNode.id === "barSupport"));
+  if (onAnchor){
+    ev.preventDefault();
+    toggleSupportMenu();
+    return;
+  }
+  var m = $("supportMenu");
+  if (m.style.display === "flex" && !m.contains(t)) toggleSupportMenu(false);
+});
 
 canvas.addEventListener("pointerdown", function(ev){
   if (ev.button !== 0) return;                    // left button / primary touch only
@@ -936,6 +978,7 @@ window.addEventListener("keydown", function(ev){
     if (brushing){ brushing = null; drawBrush(); return; }  // cancel in-progress brush first
     var hp = $("helpPanel");
     if (hp.style.display === "flex"){ hp.style.display = "none"; return; }
+    if ($("supportMenu").style.display === "flex"){ toggleSupportMenu(false); return; }
     resetZoom();
   }
 });
