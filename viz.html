@@ -58,7 +58,7 @@
   <div class="ctl" data-tip="Numeric Y axes: linear spacing, or log (great for skewed counts or port numbers)."><label>Y scale</label><select id="selYS"><option value="linear">linear</option><option value="log">log</option></select></div>
   <div class="ctl" data-tip="Flip the vertical axis direction (top-down instead of bottom-up)."><label>flip Y</label><input id="chkFlipY" type="checkbox" style="margin-top:4px"></div>
   <div class="ctl" data-tip="Dot color by category (stable palette - the busiest categories always get distinct colors) or by count on a blue-to-red gradient."><label>Color</label><select id="selC"></select></div>
-  <div class="ctl" data-tip="Dot size. The 'per group' options aggregate over the color/axis category - e.g. with grouping by src, 'distinct ports per group' sizes each dot by how many different services its device talks to. Records and flows are the traffic-quantity measures - Omada's remote log doesn't include byte or packet totals."><label>Size</label><select id="selS"></select></div>
+  <div class="ctl" data-tip="Dot size. The 'per group' options aggregate over the color/axis category - e.g. with grouping by src, 'distinct ports per group' sizes each dot by how many different services its device talks to. Records and flows are the traffic-quantity proxies - Omada's remote log doesn't include byte or packet totals."><label>Size</label><select id="selS"></select></div>
   <div class="ctl" data-tip="Show only records whose source IP contains this text (substring match)."><label>src contains</label><input id="fSrc" size="10" placeholder="192.0.2.10"></div>
   <div class="ctl" data-tip="Hide records whose source IP contains this text."><label>src not</label><input id="fSrcNot" size="10" placeholder="192.0.2.99"></div>
   <div class="ctl" data-tip="Show only records whose destination IP contains this text."><label>dst contains</label><input id="fDst" size="10" placeholder="198.51.100.20"></div>
@@ -903,6 +903,7 @@ document.addEventListener("click", function(ev){
   var m = $("supportMenu");
   if (m.style.display === "flex" && !m.contains(t)) toggleSupportMenu(false);
 });
+window.addEventListener("resize", function(){ toggleSupportMenu(false); });
 
 canvas.addEventListener("pointerdown", function(ev){
   if (ev.button !== 0) return;                    // left button / primary touch only
