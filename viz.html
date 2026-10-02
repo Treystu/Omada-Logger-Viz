@@ -122,7 +122,7 @@
   <h4>Encodings</h4>
   <p>X / Y position, color and size can each be set to any aspect: time, source, destination, port, protocol, severity, direction, counts. Size also offers <b>per-group aggregates</b> - e.g. "distinct ports per group" sizes each dot by how many different services its device talks to (grouping follows the color variable, then the categorical axis). Records and flows per group act as traffic-quantity proxies - Omada's remote log doesn't include byte or packet totals.</p>
   <h4>Spotlight related traffic</h4>
-  <p><b>Click any dot</b> to spotlight its related traffic: the exact same conversation is highlighted with a white ring, the same host pair stays bright, and traffic to the same service stays visible at reduced intensity - everything else greys out. The status bar shows the counts; the top-left legend explains the levels. Click empty space or press <b>Esc</b> to clear. The spotlight persists across zooms, filters, and auto-refreshes.</p>
+  <p><b>Click any dot</b> to spotlight its related traffic: the exact same conversation is highlighted with a white ring, the same host pair stays bright, and traffic to the same service stays visible at reduced intensity - everything else greys out. Counts in the status bar cover all matching traffic in the current view (even off-screen parts of the axis); the top-left legend explains the levels. Click empty space or press <b>Esc</b> to clear (a double-click on empty space also resets the zoom). The spotlight persists across zooms, filters, and auto-refreshes.</p>
   <h4>Points</h4>
   <p><b>Hover</b> a dot for a summary; <b>click</b> it for the full tally entry. Each dot is one known occurrence (tallies) or one raw record.</p>
   <h4>Refresh</h4>
@@ -611,6 +611,14 @@ var ctx = canvas.getContext("2d");
 var dpr = window.devicePixelRatio || 1;
 var MX0 = 78, MXR = 18, MTOP = 16, MBOT = 66;
 
+/* canvas/wrap size divergence (toolbar wrapping, window resize while the
+   status bar text grows) must be corrected before any interaction or draw:
+   otherwise the drawn geometry and hit-testing drift apart. */
+function canvasSynced(){
+  return (Math.abs(wrap.clientHeight - canvas.clientHeight) <= 1 &&
+          Math.abs(wrap.clientWidth - canvas.clientWidth) <= 1);
+}
+
 function fit(){
   var w = wrap.clientWidth, h = wrap.clientHeight;
   canvas.width = Math.max(10, Math.round(w * dpr));
@@ -622,6 +630,10 @@ function fit(){
 }
 
 function draw(){
+  if (!canvasSynced()){
+    fit();   // re-fit to the current wrap size and redraw at correct geometry
+    return;  // fit() already called draw()
+  }
   var W = wrap.clientWidth, H = wrap.clientHeight;
   ctx.clearRect(0, 0, W, H);
   var x0 = MX0, x1 = W - MXR, y0 = MTOP, y1 = H - MBOT;
@@ -664,6 +676,16 @@ function draw(){
 
   var relMode = related !== null;
   relatedStats = { flow: 0, pair: 0, svc: 0 };
+  if (relMode){
+    /* count related traffic over the full filtered point set - the counts
+       must not depend on which points are plottable on the current axes */
+    for (i = 0; i < points.length; i++){
+      var lvl0 = relationOf(points[i]);
+      if (lvl0 === 3) relatedStats.flow++;
+      else if (lvl0 === 2) relatedStats.pair++;
+      else if (lvl0 === 1) relatedStats.svc++;
+    }
+  }
   var popList = [];
   for (i = 0; i < points.length; i++){
     var p = points[i];
@@ -676,9 +698,6 @@ function draw(){
     if (relMode){
       var lvl = relationOf(p);
       if (lvl > 0){
-        if (lvl === 3) relatedStats.flow++;
-        else if (lvl === 2) relatedStats.pair++;
-        else relatedStats.svc++;
         popList.push([p, px, py, lvl]);
         drawn.push({ p: p, x: px, y: py });
         continue;                       // related drawn on top in pass 2
@@ -1013,6 +1032,7 @@ canvas.addEventListener("pointermove", function(ev){
     }
     return;
   }
+  if (!canvasSynced()) fit();   // hover at fresh geometry (bar may have reflowed)
   var h = hitTest(ev.offsetX, ev.offsetY);
   if (!h){ tip.style.display = "none"; return; }
   var p = h.p;
@@ -1040,27 +1060,21 @@ canvas.addEventListener("pointermove", function(ev){
   tip.style.left = x + "px";
   tip.style.top = y + "px";
 });
-canvas.addEventListener("pointerup", function(){
+canvas.addEventListener("pointerup", function(ev){
   if (!brushing) return;
   var b = brushing;
   brushing = null;
   drawBrush();
-  if (!dragMoved) return;
   var dx = Math.abs(b.x1 - b.x0), dy = Math.abs(b.y1 - b.y0);
-  if (dx < 14 && dy < 14) return;         // micro-drag on both axes: no zoom
-  applyBrushZoom(b, dx >= 14, dy >= 14);  // thin bands zoom exactly the axis they span
-});
-canvas.addEventListener("pointercancel", function(){
-  brushing = null;
-  drawBrush();
-});
-canvas.addEventListener("mouseleave", function(){ tip.style.display = "none"; });
-canvas.addEventListener("dblclick", function(){
-  $("detail").style.display = "none";   // first click of the pair may have opened it
-  resetZoom();
-});
-canvas.addEventListener("click", function(ev){
-  if (dragMoved){ dragMoved = false; return; }
+  if (dragMoved){
+    if (dx < 14 && dy < 14) return;         // micro-drag on both axes: no zoom
+    applyBrushZoom(b, dx >= 14, dy >= 14);  // thin bands zoom exactly the axis they span
+    return;
+  }
+  /* plain click - handled at pointerup precision (fractional coords, same
+     as the hover), after correcting any canvas/wrap geometry drift so the
+     clicked screen position maps onto the dot the cursor was over */
+  if (!canvasSynced()) fit();
   var h = hitTest(ev.offsetX, ev.offsetY);
   if (!h){
     if (related){ related = null; draw(); }   // empty click clears the spotlight
@@ -1072,6 +1086,15 @@ canvas.addEventListener("click", function(ev){
   draw();                                     // re-render with the spotlight
   $("detailBody").textContent = JSON.stringify(p.ref, null, 2);
   $("detail").style.display = "block";
+});
+canvas.addEventListener("pointercancel", function(){
+  brushing = null;
+  drawBrush();
+});
+canvas.addEventListener("mouseleave", function(){ tip.style.display = "none"; });
+canvas.addEventListener("dblclick", function(){
+  $("detail").style.display = "none";   // first click of the pair may have opened it
+  resetZoom();
 });
 window.addEventListener("keydown", function(ev){
   if (ev.key === "Escape"){
