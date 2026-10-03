@@ -42,6 +42,17 @@
   .qbtn{background:#222733;color:#8a93a3;border:1px solid #343b4a;border-radius:10px;padding:2px 9px;font:11px system-ui;cursor:pointer}
   .qbtn:hover{color:#e6ebf2;border-color:#3d5f8f}
   .qbtn.active{background:#2b4a6f;color:#e6ebf2;border-color:#3d5f8f}
+  #statsPanel{position:absolute;top:44px;left:8px;z-index:8;background:rgba(20,23,28,0.92);border:1px solid #3a4254;border-radius:8px;padding:12px 16px;display:none;font:12px/1.7 system-ui;color:#aeb7c6;max-width:340px;max-height:calc(100% - 60px);overflow:auto;box-shadow:0 4px 14px rgba(0,0,0,.55)}
+  #statsPanel h4{margin:0 0 4px;font-size:10.5px;color:#7fd0ff;text-transform:uppercase;letter-spacing:.06em}
+  #statsPanel .sg{margin-bottom:10px}
+  #statsPanel table{border-collapse:collapse;width:100%}
+  #statsPanel td{padding:1px 8px 1px 0;font-size:11.5px}
+  #statsPanel td:last-child{text-align:right;color:#d7dce3;font-weight:600;white-space:nowrap}
+  #statsPanel .bar{height:4px;background:#222733;border-radius:2px;margin-top:2px}
+  #statsPanel .bar div{height:100%;border-radius:2px}
+  .togbtn{background:#222733;color:#8a93a3;border:1px solid #343b4a;border-radius:10px;padding:2px 9px;font:11px system-ui;cursor:pointer}
+  .togbtn:hover{color:#e6ebf2;border-color:#3d5f8f}
+  .togbtn.active{background:#2b4a6f;color:#e6ebf2;border-color:#3d5f8f}
   .dl{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#8a93a3;cursor:pointer;white-space:nowrap}
   .dl input{margin:0}
   #brush{position:absolute;border:1px solid #7fd0ff;background:rgba(127,208,255,0.13);display:none;pointer-events:none;z-index:4;box-sizing:border-box}
@@ -93,6 +104,9 @@
   </div>
   <div class="ctl" data-tip="Maximum dots drawn at once (busiest kept first when exceeded). Lower it if the page feels slow."><label>point cap</label><input id="fCap" type="number" value="40000" style="width:76px"></div>
   <div class="ctl" data-tip="Refetch data every 30 s. Colors and zoom stay put; the time window slides forward quietly."><label>auto 30s</label><input id="chkAuto" type="checkbox" checked style="margin-top:4px"></div>
+  <button id="btnStats" class="togbtn" onclick="toggleStats()">stats</button>
+  <button id="togLegend" class="togbtn" data-tip="Toggle the color key on/off." onclick="toggleOverlay('legend')">key</button>
+  <button id="togDrawer" class="togbtn" data-tip="Toggle the detail panel - when off, clicking a point spotlights but doesn't open the drawer." onclick="toggleOverlay('drawer')">detail</button>
   <button id="btnGo" onclick="refresh(true)" data-tip="Refetch the data and re-fit the axes to everything visible. An active brush zoom keeps its window - use reset zoom to unzoom.">refresh</button>
   <button id="btnZoom" onclick="resetZoom()" data-tip="Undo the drag-zoom and show everything again. Double-clicking the chart does the same.">reset zoom</button>
   <button id="btnReset" onclick="resetFilters()" data-tip="Clear every filter, un-zoom, and restore the default view.">reset all</button>
@@ -100,7 +114,7 @@
   <a id="barSupport" href="#">Support</a>
   <div id="status">loading...</div>
 </div>
-<div id="wrap"><canvas id="plot"></canvas><div id="tip"></div><div id="brush"></div><div id="supportRibbon">
+<div id="wrap"><canvas id="plot"></canvas><div id="tip"></div><div id="brush"></div><div id="statsPanel"></div><div id="supportRibbon">
   <span class="sup-x" onclick="dismissSupport()" title="Dismiss (won't show again)">&#215;</span>
   <b>Found this useful?</b><br>
   This tool is free and always will be.
@@ -663,6 +677,7 @@ function draw(){
     ctx.fillText(points.length ? "no plottable points for this X/Y selection" : "no points match the filters", W / 2, H / 2);
     buildHitGrid();
     updStatus();
+    if (statsOpen) renderStats();
     return;
   }
   var i, t;
@@ -740,10 +755,11 @@ function draw(){
     ctx.lineWidth = 1;
   }
   ctx.globalAlpha = 1;
-  drawLegend(x1);
-  if (relMode) drawSpotlightLegend();
+  if (showLegend) drawLegend(x1);
+  if (relMode && showLegend) drawSpotlightLegend();
   buildHitGrid();
   updStatus();
+  if (statsOpen) renderStats();
 }
 
 function drawSizeLegend(x1, yTop, withBacking){
@@ -775,6 +791,7 @@ function drawSizeLegend(x1, yTop, withBacking){
 }
 
 function drawLegend(x1){
+  if (!showLegend) return;
   var v = $("selC").value;
   var y = 24, i;
   ctx.font = "11px system-ui"; ctx.textAlign = "left";
@@ -1020,6 +1037,88 @@ function quickRange(mins){
   filterChange();
 }
 var quickMins = null;
+
+/* ---- overlay visibility (legend + drawer), persisted ---- */
+var showLegend = true, showDrawer = true;
+try {
+  showLegend = localStorage.getItem("omada_legend") !== "0";
+  showDrawer = localStorage.getItem("omada_drawer") !== "0";
+} catch (e) {}
+function toggleOverlay(which){
+  if (which === "legend"){
+    showLegend = !showLegend;
+    try { localStorage.setItem("omada_legend", showLegend ? "1" : "0"); } catch (e) {}
+    $("togLegend").classList.toggle("active", showLegend);
+    draw();
+  } else if (which === "drawer"){
+    showDrawer = !showDrawer;
+    try { localStorage.setItem("omada_drawer", showDrawer ? "1" : "0"); } catch (e) {}
+    $("togDrawer").classList.toggle("active", showDrawer);
+    if (!showDrawer) $("detail").style.display = "none";
+  }
+}
+$("togLegend").classList.toggle("active", showLegend);
+$("togDrawer").classList.toggle("active", showDrawer);
+
+/* ---- stats panel: unique counts + breakdowns for the filtered set ---- */
+var statsOpen = false;
+function toggleStats(){
+  statsOpen = !statsOpen;
+  $("btnStats").classList.toggle("active", statsOpen);
+  renderStats();
+}
+function fmtInt(n){
+  return n >= 1000000 ? (n / 1000000).toFixed(1) + "M"
+       : n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(n);
+}
+function renderStats(){
+  var el = $("statsPanel");
+  if (!statsOpen){ el.style.display = "none"; return; }
+  el.style.display = "block";
+  var srcs = {}, dsts = {}, dpts = {}, flows = {}, protos = {};
+  var dirs = { internal: 0, outbound: 0, inbound: 0, other: 0 };
+  var types = { flow: 0, msg: 0 };
+  var total = 0;
+  var seen = new Set();   // dedupe: each tally entry / raw record counts once
+  for (var i = 0; i < points.length; i++){
+    var p = points[i];
+    if (seen.has(p.ref)) continue;
+    seen.add(p.ref);
+    total += (p.count || 0);
+    if (p.src) srcs[p.src] = 1;
+    if (p.dst) dsts[p.dst] = 1;
+    if (p.dpt !== null && p.dpt !== undefined) dpts[p.dpt] = 1;
+    if (p.dst) flows[(p.src || "-") + "|" + p.dst + "|" + ((p.dpt === null || p.dpt === undefined) ? "-" : p.dpt)] = 1;
+    if (p.proto !== null && p.proto !== undefined) protos[p.proto] = 1;
+    if (p.dir) dirs[p.dir] = (dirs[p.dir] || 0) + (p.count || 0);
+    if (p.type) types[p.type] = (types[p.type] || 0) + (p.count || 0);
+  }
+  var P = { 1: "icmp", 2: "igmp", 6: "tcp", 17: "udp", 47: "gre", 50: "esp" };
+  var protoList = Object.keys(protos).sort(function(a,b){ return protos[b] - protos[a]; });
+  var h = '<div class="sg"><h4>Unique counts</h4><table>' +
+    '<tr><td>Sources</td><td>' + Object.keys(srcs).length + '</td></tr>' +
+    '<tr><td>Destinations</td><td>' + Object.keys(dsts).length + '</td></tr>' +
+    '<tr><td>Dest ports</td><td>' + Object.keys(dpts).length + '</td></tr>' +
+    '<tr><td>Flows (src&#8594;dst:port)</td><td>' + Object.keys(flows).length + '</td></tr>' +
+    '<tr><td>Protocols</td><td>' + Object.keys(protos).length + '</td></tr></table></div>';
+  h += '<div class="sg"><h4>Totals (per entry)</h4><table>' +
+    '<tr><td>Records in view</td><td>' + fmtInt(total) + '</td></tr>' +
+    '<tr><td>Flow records</td><td>' + fmtInt(types.flow) + '</td></tr>' +
+    '<tr><td>Messages / events</td><td>' + fmtInt(types.msg) + '</td></tr>' +
+    '<tr><td>Tally entries</td><td>' + fmtInt(data.entries.length) + '</td></tr>' +
+    '<tr><td>Raw records</td><td>' + fmtInt(data.raw.length) + '</td></tr></table></div>';
+  var dmax = Math.max(1, dirs.internal, dirs.outbound, dirs.inbound, dirs.other);
+  h += '<div class="sg"><h4>By direction</h4><table>';
+  var DL = { internal: "Internal", outbound: "Outbound", inbound: "Inbound", other: "Other" };
+  var DC = { internal: "#7fc45d", outbound: "#5d9ce0", inbound: "#e05d9f", other: "#6b7686" };
+  for (var dk in DL){
+    h += '<tr><td>' + DL[dk] + '</td><td>' + fmtInt(dirs[dk]) + '</td></tr>' +
+         '<tr><td colspan="2"><div class="bar"><div style="width:' +
+         Math.round(dirs[dk] / dmax * 100) + '%;background:' + DC[dk] + '"></div></div></td></tr>';
+  }
+  h += '</table></div>';
+  el.innerHTML = h;
+}
 function toggleSupportMenu(force){
   var el = $("supportMenu");
   var show = (force !== undefined) ? force : (el.style.display !== "flex");
@@ -1119,8 +1218,10 @@ canvas.addEventListener("pointerup", function(ev){
   related = { src: p.src, dst: p.dst, proto: p.proto, dpt: p.dpt,
               type: p.type, label: p.label };
   draw();                                     // re-render with the spotlight
-  $("detailBody").textContent = JSON.stringify(p.ref, null, 2);
-  $("detail").style.display = "block";
+  if (showDrawer){
+    $("detailBody").textContent = JSON.stringify(p.ref, null, 2);
+    $("detail").style.display = "block";
+  }
 });
 canvas.addEventListener("pointercancel", function(){
   brushing = null;
