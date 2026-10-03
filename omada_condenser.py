@@ -50,6 +50,10 @@ FLOW_RE = re.compile(r"IP SRC=(\S+) IP DST=(\S+) IP proto=(\d+)(?: SPT=(\d+))?(?
 AP_RE = re.compile(r"AP MAC=(\S+)")
 PRI_RE = re.compile(r"^<(\d{1,3})>")
 EPOCH_RE = re.compile(r"\[\d+\.\d+\]")
+IPV4_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
+MAC_RE = re.compile(r"\b(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b")
+DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}")
+RFC3164_RE = re.compile(r"^\w{3}\s+\d{1,2}\s\d{2}:\d{2}:\d{2}\s+\S+:\s*")
 
 
 class Condenser:
@@ -193,6 +197,13 @@ class Condenser:
             sev = int(pm.group(1)) % 8
             body = PRI_RE.sub("", raw, count=1)
         template = EPOCH_RE.sub("[...]", body)
+        # Strip the RFC 3164 header (timestamp + hostname) so only the
+        # event pattern remains, then mask variable values so repeated
+        # events aggregate into one tally (e.g. all DHCP allocations)
+        template = RFC3164_RE.sub("", template)
+        template = DATE_RE.sub("<date>", template)
+        template = IPV4_RE.sub("<ip>", template)
+        template = MAC_RE.sub("<mac>", template)
         key = "msg|%s|%s|%s" % (src_ip, sev if sev is not None else "-", template)
         e = self.state.get(key)
         if e is None:

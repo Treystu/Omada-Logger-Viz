@@ -460,6 +460,33 @@ def main():
     check("viz: RFC1918 direction classification (internal/outbound/inbound/other)",
           not bad, "; ".join(bad))
 
+    # 18. Template masking: IPs and MACs aggregate into one tally
+    import omada_condenser as oc
+    c_mask = oc.Condenser(os.path.join(tmp, "mask_test.json"), 5000000)
+    c_mask.add("2026-10-01T10:00:00.000-10:00", "192.168.0.1",
+               "<134>Oct 01 10:00:00 ER8411: DHCP Server allocated IP address "
+               "192.168.0.104 for the [client:2C-1B-3A-94-E0-76 ].")
+    c_mask.add("2026-10-01T10:00:01.000-10:00", "192.168.0.1",
+               "<134>Oct 01 10:00:01 ER8411: DHCP Server allocated IP address "
+               "192.168.0.105 for the [client:A8-6E-84-AE-9F-B9 ].")
+    c_mask.add("2026-10-01T10:00:02.000-10:00", "192.168.0.1",
+               "<134>Oct 01 10:00:02 ER8411: DHCP Server allocated IP address "
+               "192.168.0.106 for the [client:14-AC-60-24-8A-B7 ].")
+    c_mask.flush()
+    with open(os.path.join(tmp, "mask_test.json"), encoding="utf-8") as f:
+        masked = json.load(f)
+    masked.pop("_meta", None)
+    keys = [k for k in masked if k.startswith("msg|")]
+    check("condenser: template masking aggregates same-pattern messages",
+          len(keys) == 1 and masked[keys[0]]["count"] == 3,
+          "keys=%d count=%s" % (len(keys), masked[keys[0]]["count"] if keys else 0))
+    if keys:
+        t = masked[keys[0]]["template"]
+        ok_t = ("<ip>" in t and "<mac>" in t and
+                "192.168.0" not in t and "2C-1B" not in t)
+        check("condenser: masked template has <ip>/<mac> placeholders, no raw values",
+              ok_t, t[:120])
+
     print()
     if failures:
         print("FAILED: " + ", ".join(failures))
