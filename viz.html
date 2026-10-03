@@ -74,10 +74,10 @@
   <div class="ctl" data-tip="Flip the vertical axis direction (top-down instead of bottom-up)."><label>flip Y</label><input id="chkFlipY" type="checkbox" style="margin-top:4px"></div>
   <div class="ctl" data-tip="Dot color by category (stable palette - the busiest categories always get distinct colors) or by count on a blue-to-red gradient."><label>Color</label><select id="selC"></select></div>
   <div class="ctl" data-tip="Dot size. The 'per group' options aggregate over the color/axis category - e.g. with grouping by src, 'distinct ports per group' sizes each dot by how many different services its device talks to. Records and flows are the traffic-quantity proxies - Omada's remote log doesn't include byte or packet totals."><label>Size</label><select id="selS"></select></div>
-  <div class="ctl" data-tip="Show only records whose source IP contains this text (substring match)."><label>src contains</label><input id="fSrc" size="10" placeholder="192.0.2.10"></div>
-  <div class="ctl" data-tip="Hide records whose source IP contains this text."><label>src not</label><input id="fSrcNot" size="10" placeholder="192.0.2.99"></div>
-  <div class="ctl" data-tip="Show only records whose destination IP contains this text."><label>dst contains</label><input id="fDst" size="10" placeholder="198.51.100.20"></div>
-  <div class="ctl" data-tip="Hide records whose destination IP contains this text."><label>dst not</label><input id="fDstNot" size="10" placeholder="203.0.113.7"></div>
+  <div class="ctl" data-tip="Show only records whose source IP matches. Supports: single IPs (192.168.0.1), ranges (192.168.0.100-200), shorthand lists (192.168.0.1,2,3,6-10,12), CIDR (10.0.0.0/8), or plain text substring."><label>src contains</label><input id="fSrc" size="10" placeholder="192.0.2.10"></div>
+  <div class="ctl" data-tip="Hide records whose source IP matches. Same syntax as src contains."><label>src not</label><input id="fSrcNot" size="10" placeholder="192.0.2.99"></div>
+  <div class="ctl" data-tip="Show only records whose destination IP matches. Same syntax as src contains."><label>dst contains</label><input id="fDst" size="10" placeholder="198.51.100.20"></div>
+  <div class="ctl" data-tip="Hide records whose destination IP matches. Same syntax as src contains."><label>dst not</label><input id="fDstNot" size="10" placeholder="203.0.113.7"></div>
   <div class="ctl" data-tip="Show only these dest ports. Comma list and/or ranges, e.g. 443, 53, 1000-2000."><label>ports are</label><input id="fPortIn" size="11" placeholder="443, 1000-2000"></div>
   <div class="ctl" data-tip="Exclude these dest ports - e.g. enter 443 to see everything OTHER than that port."><label>ports not</label><input id="fPortNot" size="11" placeholder="443"></div>
   <div class="ctl" data-tip="RFC1918 direction classes. Untick any combination - e.g. untick 'out' and 'other' for internal + inbound only. Unchecking all shows nothing."><label>direction</label>
@@ -140,8 +140,9 @@
   <p><b>Drag a rectangle on the chart</b> to zoom into any region - dense clusters become readable. A thin horizontal or vertical band zooms just the axis it spans. <b>Double-click</b> the chart, press <b>Esc</b>, or hit "reset zoom" to zoom back out. Zoom holds while data refreshes; changing an axis resets it. Double-clicking the detail panel closes it.</p>
   <h4>Filters</h4>
   <ul>
-    <li><b>src / dst contains</b> - keep matching text (substring).</li>
-    <li><b>src / dst not</b> - hide matching text.</li>
+    <li><b>src / dst contains + src / dst not</b> - smart IP matching: single
+    IPs (192.168.0.1), ranges (192.168.0.100-200), shorthand lists
+    (<b>192.168.0.1,2,3,6-10,12</b>), CIDR (10.0.0.0/8), or plain substring.</li>
     <li><b>ports are / ports not</b> - dest-port lists, e.g. <b>443, 53, 1000-2000</b>. "ports not" shows everything except those ports.</li>
     <li><b>direction</b> - tick any combination: e.g. untick <b>out</b> and <b>other</b> for internal and inbound only.</li>
     <li><b>from / to</b> - time window; <b>min count</b> - busiest tallies only.</li>
@@ -149,7 +150,7 @@
   <h4>Encodings</h4>
   <p>X / Y position, color and size can each be set to any aspect: time, source, destination, port, protocol, severity, direction, counts. Size also offers <b>per-group aggregates</b> - e.g. "distinct ports per group" sizes each dot by how many different services its device talks to (grouping follows the color variable, then the categorical axis). Records and flows per group act as traffic-quantity proxies - Omada's remote log doesn't include byte or packet totals.</p>
   <h4>Spotlight related traffic</h4>
-  <p><b>Click any dot</b> to spotlight its related traffic: the exact same conversation is highlighted with a white ring, the same host pair stays bright, and traffic to the same service stays visible at reduced intensity - everything else greys out. Counts in the status bar cover all matching traffic in the current view (even off-screen parts of the axis); the top-left legend explains the levels. Click empty space or press <b>Esc</b> to clear (a double-click on empty space also resets the zoom). The spotlight persists across zooms, filters, and auto-refreshes.</p>
+  <p><b>Click any dot</b> to spotlight its related traffic: the exact same conversation is highlighted with a white ring, the same host pair stays bright, and traffic to the same service stays visible at reduced intensity - everything else greys out. <b>Click a color-key entry</b> to spotlight that entire category (e.g. all traffic from one device). Click empty space or press <b>Esc</b> to clear. The spotlight persists across zooms, filters, and auto-refreshes.</p>
   <h4>Points</h4>
   <p><b>Hover</b> a dot for a summary; <b>click</b> it for the full tally entry. Each dot is one known occurrence (tallies) or one raw record.</p>
   <h4>Refresh</h4>
@@ -169,15 +170,15 @@ var LABEL = {ts:"time",first:"first seen",last:"last seen",count:"count",src:"sr
 var TIMEK = {ts:1,first:1,last:1};
 var SEVN = ["emerg","alert","crit","err","warning","notice","info","debug"];
 var PROTO = {1:"icmp",6:"tcp",17:"udp"};
-/* 16 colors at golden-angle hue spacing with alternating lightness/saturation,
-   then assigned by frequency rank in ensureColors(): the biggest
-   categories always get distinct colors, spread evenly across the spectrum. */
+/* 32 colors at golden-angle hue spacing with 3-level lightness and
+   2-level saturation - the top visible categories always get distinct,
+   distinguishable colors. Assigned by frequency rank in ensureColors(). */
 var PAL = [];
 (function(){
-  for (var i = 0; i < 16; i++){
+  for (var i = 0; i < 32; i++){
     var hue = Math.round((i * 137.508) % 360);
-    var l = (i % 2 === 0) ? 62 : 50;
-    var s = (i % 4 < 2) ? 74 : 60;
+    var l = 55 + (i % 3) * 8;     // 55, 63, 71
+    var s = 72 - (i % 2) * 17;    // 72, 55
     PAL.push("hsl(" + hue + "," + s + "%," + l + "%)");
   }
 })();
@@ -227,6 +228,7 @@ var aggGroup = "src", aggVals = {}, aggMin = 0, aggMax = 1;
    (full color) > same service (reduced intensity). Esc / empty click clears. */
 var related = null;                 // pattern snapshot of the clicked point
 var relatedStats = { flow: 0, pair: 0, svc: 0 };
+var legendHits = [];                // clickable legend entries [{x,y,w,h,value,varName}]
 
 function buildAllPoints(){
   var pts = [], i, k, ts;
@@ -270,6 +272,86 @@ function parsePortList(s){
   }
   return out;
 }
+/* IP filter parser - supports:
+   Full IP:      192.168.0.1
+   IP range:     192.168.0.100-200  (last-octet range)
+   Shorthand:    192.168.0.1,2,3,6-10,12  (comma-separated, continuation)
+   CIDR:         192.168.0.0/24  or 10.0.0.0/8
+   Partial:      192.168.0  or 192.168  (prefix match)
+   Returns a matcher function, or null if input isn't IP-like. */
+function parseIPFilter(s){
+  if (!s || !s.trim()) return null;
+  var tokens = s.split(",").map(function(x){ return x.trim(); }).filter(Boolean);
+  if (!tokens.length) return null;
+  var matchers = [];
+  var lastPrefix = null;
+  for (var i = 0; i < tokens.length; i++){
+    var t = tokens[i];
+    var dashIdx = t.lastIndexOf("-");
+    var lastDot = t.lastIndexOf(".");
+    if (t.indexOf("/") >= 0){
+      var cp = t.split("/");
+      var ipP = cp[0].split(".");
+      var bits = parseInt(cp[1], 10);
+      var octets = Math.floor(bits / 8);
+      if (octets >= 1 && octets <= 3){
+        lastPrefix = ipP.slice(0, octets).join(".");
+        matchers.push({ p: lastPrefix, lo: null, hi: null });
+      }
+    } else if (lastDot >= 0 && dashIdx > lastDot){
+      var before = t.substring(0, dashIdx);
+      var after = t.substring(dashIdx + 1);
+      var ipP2 = before.split(".");
+      if (ipP2.length >= 2){
+        lastPrefix = ipP2.slice(0, ipP2.length - 1).join(".");
+        matchers.push({ p: lastPrefix,
+                        lo: parseInt(ipP2[ipP2.length - 1], 10),
+                        hi: parseInt(after, 10) });
+      }
+    } else if (lastDot >= 0){
+      var ipP3 = t.split(".");
+      if (ipP3.length === 4){
+        lastPrefix = ipP3.slice(0, 3).join(".");
+        matchers.push({ p: lastPrefix,
+                        lo: parseInt(ipP3[3], 10),
+                        hi: parseInt(ipP3[3], 10) });
+      } else {
+        lastPrefix = t;
+        matchers.push({ p: t, lo: null, hi: null });
+      }
+    } else if (lastPrefix){
+      if (dashIdx > 0){
+        matchers.push({ p: lastPrefix,
+                        lo: parseInt(t.substring(0, dashIdx), 10),
+                        hi: parseInt(t.substring(dashIdx + 1), 10) });
+      } else {
+        matchers.push({ p: lastPrefix,
+                        lo: parseInt(t, 10),
+                        hi: parseInt(t, 10) });
+      }
+    }
+  }
+  if (!matchers.length) return null;
+  return function(ip){
+    if (!ip) return false;
+    var parts = ip.split(".");
+    for (var i = 0; i < matchers.length; i++){
+      var m = matchers[i];
+      var mp = m.p.split(".");
+      var ok = true;
+      for (var j = 0; j < mp.length; j++){
+        if (parseInt(parts[j] || "-1", 10) !== parseInt(mp[j], 10)){
+          ok = false; break;
+        }
+      }
+      if (!ok) continue;
+      if (m.lo === null) return true;
+      var next = parseInt(parts[mp.length] || "-1", 10);
+      if (next >= m.lo && next <= m.hi) return true;
+    }
+    return false;
+  };
+}
 function portMatch(dpt, list){
   if (dpt === null || dpt === undefined) return false;
   for (var i = 0; i < list.length; i++){
@@ -283,6 +365,8 @@ function applyFilters(){
   var fSrcNot = $("fSrcNot").value.trim(), fDstNot = $("fDstNot").value.trim();
   var portIn = parsePortList($("fPortIn").value);
   var portNot = parsePortList($("fPortNot").value);
+  var srcInIP = parseIPFilter(fSrc), srcNotIP = parseIPFilter(fSrcNot);
+  var dstInIP = parseIPFilter(fDst), dstNotIP = parseIPFilter(fDstNot);
   var dirs = { internal: $("chkDirInt").checked, outbound: $("chkDirOut").checked,
                inbound: $("chkDirIn").checked, other: $("chkDirOth").checked };
   var fMin = parseInt($("fMin").value, 10) || 0;
@@ -292,10 +376,22 @@ function applyFilters(){
   var out = [];
   for (var i = 0; i < allPoints.length; i++){
     var p = allPoints[i];
-    if (fSrc && String(p.src || "").indexOf(fSrc) < 0) continue;
-    if (fSrcNot && String(p.src || "").indexOf(fSrcNot) >= 0) continue;
-    if (fDst && String(p.dst || "").indexOf(fDst) < 0) continue;
-    if (fDstNot && String(p.dst || "").indexOf(fDstNot) >= 0) continue;
+    if (fSrc){
+      if (srcInIP){ if (!srcInIP(p.src)) continue; }
+      else if (String(p.src || "").indexOf(fSrc) < 0) continue;
+    }
+    if (fSrcNot){
+      if (srcNotIP){ if (srcNotIP(p.src)) continue; }
+      else if (String(p.src || "").indexOf(fSrcNot) >= 0) continue;
+    }
+    if (fDst){
+      if (dstInIP){ if (!dstInIP(p.dst)) continue; }
+      else if (String(p.dst || "").indexOf(fDst) < 0) continue;
+    }
+    if (fDstNot){
+      if (dstNotIP){ if (dstNotIP(p.dst)) continue; }
+      else if (String(p.dst || "").indexOf(fDstNot) >= 0) continue;
+    }
     if (portIn.length && !portMatch(p.dpt, portIn)) continue;
     if (portNot.length && portMatch(p.dpt, portNot)) continue;
     if (!dirs[p.dir || "other"]) continue;
@@ -795,6 +891,7 @@ function drawLegend(x1){
   var v = $("selC").value;
   var y = 24, i;
   ctx.font = "11px system-ui"; ctx.textAlign = "left";
+  legendHits = [];
   if (!v){
     drawSizeLegend(x1, 24, true);
     return;
@@ -835,6 +932,8 @@ function drawLegend(x1){
     ctx.fillRect(x1 - 150, yy - 8, 10, 10);
     ctx.fillStyle = "#8a93a3";
     ctx.fillText(trunc(keys[i], 20) + " (" + freq[keys[i]] + ")", x1 - 134, yy);
+    legendHits.push({ x: x1 - 154, y: yy - 9, w: 154, h: 17,
+                     value: keys[i], varName: v });
   }
   if (keys.length > shown){
     ctx.fillStyle = "#6b7686";
@@ -887,6 +986,9 @@ function updStatus(){
 
 function relationOf(p){
   if (!related) return 0;
+  if (related.type === "category"){
+    return (String(p[related.varName]) === String(related.value)) ? 3 : 0;
+  }
   if (related.type === "msg"){
     if (p.type !== "msg") return 0;
     if (p.src === related.src && p.label === related.label) return 3;
@@ -1209,6 +1311,22 @@ canvas.addEventListener("pointerup", function(ev){
      as the hover), after correcting any canvas/wrap geometry drift so the
      clicked screen position maps onto the dot the cursor was over */
   if (!canvasSynced()) fit();
+  /* check legend clicks first - clicking a color-key entry spotlights
+     that category (grey out everything else) */
+  for (var li = 0; li < legendHits.length; li++){
+    var lh = legendHits[li];
+    if (ev.offsetX >= lh.x && ev.offsetX <= lh.x + lh.w &&
+        ev.offsetY >= lh.y && ev.offsetY <= lh.y + lh.h){
+      if (related && related.type === "category" &&
+          related.varName === lh.varName && related.value === lh.value){
+        related = null;  // toggle off
+      } else {
+        related = { type: "category", varName: lh.varName, value: lh.value };
+      }
+      draw();
+      return;
+    }
+  }
   var h = hitTest(ev.offsetX, ev.offsetY);
   if (!h){
     if (related){ related = null; draw(); }   // empty click clears the spotlight
@@ -1268,7 +1386,7 @@ function refresh(fitAxes){
 }
 
 function controlChange(){ clearFitCaches(); zoomX = zoomY = null; redrawFromPoints(); }
-function filterChange(){ clearFitCaches(); redrawFromPoints(); }
+function filterChange(){ clearFitCaches(); colorRank = {}; redrawFromPoints(); }
 var deb = null;
 ["fSrc", "fDst", "fSrcNot", "fDstNot", "fPortIn", "fPortNot", "fCap"].forEach(function(id){
   $(id).addEventListener("input", function(){
