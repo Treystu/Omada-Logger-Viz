@@ -150,7 +150,9 @@
   <h4>Encodings</h4>
   <p>X / Y position, color and size can each be set to any aspect: time, source, destination, port, protocol, severity, direction, counts. Size also offers <b>per-group aggregates</b> - e.g. "distinct ports per group" sizes each dot by how many different services its device talks to (grouping follows the color variable, then the categorical axis). Records and flows per group act as traffic-quantity proxies - Omada's remote log doesn't include byte or packet totals.</p>
   <h4>Spotlight related traffic</h4>
-  <p><b>Click any dot</b> to spotlight its related traffic: the exact same conversation is highlighted with a white ring, the same host pair stays bright, and traffic to the same service stays visible at reduced intensity - everything else greys out. <b>Click a color-key entry</b> to spotlight that entire category (e.g. all traffic from one device). Click empty space or press <b>Esc</b> to clear. The spotlight persists across zooms, filters, and auto-refreshes.</p>
+  <p><b>Click any dot</b> to spotlight its related traffic: the exact same conversation is highlighted with a white ring, the same host pair stays bright, and traffic to the same service stays visible at reduced intensity - everything else greys out. The stats panel shows metrics for the spotlighted set.</p>
+  <h4>Key drilldown</h4>
+  <p><b>Click a color-key entry</b> to filter the entire view to that value (e.g. show only one source IP, or one severity). The entry gets a blue border; click it again to remove the filter. The stats panel reflects the narrowed set, plus any active zoom window.</p>
   <h4>Points</h4>
   <p><b>Hover</b> a dot for a summary; <b>click</b> it for the full tally entry. Each dot is one known occurrence (tallies) or one raw record.</p>
   <h4>Refresh</h4>
@@ -229,6 +231,27 @@ var aggGroup = "src", aggVals = {}, aggMin = 0, aggMax = 1;
 var related = null;                 // pattern snapshot of the clicked point
 var relatedStats = { flow: 0, pair: 0, svc: 0 };
 var legendHits = [];                // clickable legend entries [{x,y,w,h,value,varName}]
+var legendDrill = null;             // {varName, value} - legend click drills to this value
+
+/* zoom-window check for stats: true if a point falls inside the active zoom */
+function passesZoom(p){
+  if (!zoomX && !zoomY) return true;
+  function one(p, zoom){
+    if (!zoom) return true;
+    var val = p[zoom.v];
+    if (val === null || val === undefined) return false;
+    if (zoom.lo !== undefined && zoom.lo !== null && typeof zoom.lo === "number"){
+      var v = (typeof val === "string") ? Date.parse(val) : +val;
+      if (isNaN(v)) return false;
+      return v >= zoom.lo && v <= zoom.hi;
+    }
+    if (zoom.lanes && zoom.lanes.length){
+      return zoom.lanes.indexOf(val) >= 0;
+    }
+    return true;
+  }
+  return one(p, zoomX) && one(p, zoomY);
+}
 
 function buildAllPoints(){
   var pts = [], i, k, ts;
@@ -400,6 +423,10 @@ function applyFilters(){
     if (fDs !== "both" && p.ds !== fDs) continue;
     if (fFrom && p.ts < fFrom) continue;
     if (fTo && p.ts > fTo) continue;
+    if (legendDrill){
+      var dv = p[legendDrill.varName];
+      if (String(dv === null || dv === undefined ? "-" : dv) !== String(legendDrill.value)) continue;
+    }
     out.push(p);
   }
   capped = out.length > cap;
@@ -928,9 +955,16 @@ function drawLegend(x1){
   ctx.fillStyle = "#aeb7c6"; ctx.fillText(LABEL[v] || v, x1 - 150, y - 6);
   for (i = 0; i < shown; i++){
     var yy = y + 12 + i * 15;
+    var isDrilled = legendDrill && String(legendDrill.value) === String(keys[i]);
+    if (isDrilled){
+      ctx.strokeStyle = "#7fd0ff";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x1 - 152, yy - 10, 148, 16);
+      ctx.lineWidth = 1;
+    }
     ctx.fillStyle = catColor(v, keys[i]);
     ctx.fillRect(x1 - 150, yy - 8, 10, 10);
-    ctx.fillStyle = "#8a93a3";
+    ctx.fillStyle = isDrilled ? "#e6ebf2" : "#8a93a3";
     ctx.fillText(trunc(keys[i], 20) + " (" + freq[keys[i]] + ")", x1 - 134, yy);
     legendHits.push({ x: x1 - 154, y: yy - 9, w: 154, h: 17,
                      value: keys[i], varName: v });
@@ -979,9 +1013,10 @@ function updStatus(){
   var rel = related ? (" | related: " + (relatedStats.flow + relatedStats.pair + relatedStats.svc) +
     " (same flow " + relatedStats.flow + ", pair " + relatedStats.pair +
     ", service " + relatedStats.svc + ")") : "";
+  var drill = legendDrill ? (" | key: " + legendDrill.value) : "";
   $("status").textContent = drawn.length + " pts" + (capped ? " (capped)" : "") +
     " | tallies " + data.entries.length + " entries, raw " + data.raw.length + " recs" +
-    ((zoomX || zoomY) ? " | zoomed (dbl-click to reset)" : "") + rel;
+    ((zoomX || zoomY) ? " | zoomed (dbl-click to reset)" : "") + drill + rel;
 }
 
 function relationOf(p){
@@ -1109,6 +1144,7 @@ function resetFilters(){
   $("selC").value = "src";
   $("selS").value = "count";
   related = null;
+  legendDrill = null;
   zoomX = zoomY = null;
   clearFitCaches();
   redrawFromPoints();
@@ -1182,8 +1218,30 @@ function renderStats(){
   var types = { flow: 0, msg: 0 };
   var total = 0;
   var seen = new Set();   // dedupe: each tally entry / raw record counts once
-  for (var i = 0; i < points.length; i++){
-    var p = points[i];
+
+  /* determine WHICH points the stats describe:
+     - spotlight active -> only the spotlighted (related) points
+     - zoom active -> only points inside the zoom window
+     - otherwise -> the full filtered set */
+  var statsPoints = points;
+  var scopeLabel = null;
+  if (related !== null){
+    statsPoints = statsPoints.filter(function(p){ return relationOf(p) > 0; });
+    scopeLabel = related.type === "category"
+      ? "spotlight: " + related.value
+      : "spotlight: " + (related.label || "conversation");
+  }
+  if (zoomX !== null || zoomY !== null){
+    statsPoints = statsPoints.filter(passesZoom);
+    scopeLabel = scopeLabel ? scopeLabel + " (zoomed)" : "zoomed window";
+  }
+  if (legendDrill){
+    scopeLabel = scopeLabel ? scopeLabel + " + drilldown" : null;
+    // points are already filtered by legendDrill in applyFilters
+  }
+
+  for (var i = 0; i < statsPoints.length; i++){
+    var p = statsPoints[i];
     if (seen.has(p.ref)) continue;
     seen.add(p.ref);
     total += (p.count || 0);
@@ -1197,7 +1255,11 @@ function renderStats(){
   }
   var P = { 1: "icmp", 2: "igmp", 6: "tcp", 17: "udp", 47: "gre", 50: "esp" };
   var protoList = Object.keys(protos).sort(function(a,b){ return protos[b] - protos[a]; });
-  var h = '<div class="sg"><h4>Unique counts</h4><table>' +
+  var h = '';
+  if (scopeLabel){
+    h += '<div style="color:#7fd0ff;font-size:11px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #3a4254">' + scopeLabel + '</div>';
+  }
+  h += '<div class="sg"><h4>Unique counts</h4><table>' +
     '<tr><td>Sources</td><td>' + Object.keys(srcs).length + '</td></tr>' +
     '<tr><td>Destinations</td><td>' + Object.keys(dsts).length + '</td></tr>' +
     '<tr><td>Dest ports</td><td>' + Object.keys(dpts).length + '</td></tr>' +
@@ -1311,19 +1373,20 @@ canvas.addEventListener("pointerup", function(ev){
      as the hover), after correcting any canvas/wrap geometry drift so the
      clicked screen position maps onto the dot the cursor was over */
   if (!canvasSynced()) fit();
-  /* check legend clicks first - clicking a color-key entry spotlights
-     that category (grey out everything else) */
+  /* check legend clicks first - clicking a color-key entry DRILLS DOWN
+     to that value (filters the view to only that category) */
   for (var li = 0; li < legendHits.length; li++){
     var lh = legendHits[li];
     if (ev.offsetX >= lh.x && ev.offsetX <= lh.x + lh.w &&
         ev.offsetY >= lh.y && ev.offsetY <= lh.y + lh.h){
-      if (related && related.type === "category" &&
-          related.varName === lh.varName && related.value === lh.value){
-        related = null;  // toggle off
+      if (legendDrill && legendDrill.varName === lh.varName &&
+          String(legendDrill.value) === String(lh.value)){
+        legendDrill = null;  // toggle off
       } else {
-        related = { type: "category", varName: lh.varName, value: lh.value };
+        legendDrill = { varName: lh.varName, value: lh.value };
+        related = null;  // clear point spotlight when drilling
       }
-      draw();
+      filterChange();  // re-filters + re-ranks colors + redraws
       return;
     }
   }
@@ -1356,6 +1419,7 @@ window.addEventListener("keydown", function(ev){
     var hp = $("helpPanel");
     if (hp.style.display === "flex"){ hp.style.display = "none"; return; }
     if ($("supportMenu").style.display === "flex"){ toggleSupportMenu(false); return; }
+    if (legendDrill){ legendDrill = null; filterChange(); return; }  // clear drilldown
     if (related){ related = null; draw(); return; }          // clear spotlight
     resetZoom();
   }
