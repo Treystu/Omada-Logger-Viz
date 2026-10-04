@@ -205,8 +205,8 @@ git clone https://github.com/Treystu/Omada-Logger-Viz.git
 cd Omada-Logger-Viz
 .\install.ps1        <span class="c"># one UAC prompt: firewall rule + boot task + watchdog</span>
 
-<span class="c"># ER8411: System Tools > System Log > Log Settings</span>
-<span class="c">#   enable remote logging -> this PC's LAN IP, port 514 (UDP)</span>
+<span class="c"># Omada Controller: Logs > Setting > Advanced > Remote Logging</span>
+<span class="c">#   Enable, point to this PC's LAN IP, port 514, More Detail Logs on</span>
 
 python omada_viz.py  <span class="c"># open http://localhost:8780</span></pre>
 </section>

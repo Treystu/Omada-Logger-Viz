@@ -54,10 +54,13 @@ cd Omada-Logger-Viz
 .\install.ps1        # UAC prompt: firewall rule + boot task + watchdog
 ```
 
-Then, on the Omada device (e.g. ER8411 web UI): **System Tools → System
-Log → Log Settings** - enable remote logging and point it at this PC's LAN
-IP, port **514** (UDP). Omada remote logging is UDP-only; that's all this
-listens on.
+Then, on the **Omada Controller** (site management):
+**Logs → Setting → Advanced → Remote Logging** — toggle **Enable**, enter
+this PC's LAN IP, keep port **514** (UDP default), enable **More Detail Logs**.
+Or on the ER8411 web UI directly (standalone, no controller):
+**System Tools → System Log → Log Settings** — enable remote logging,
+point at this PC's LAN IP, port **514** (UDP). Omada remote logging is
+UDP-only; that's all this listens on.
 
 Watch it live - double-click the **Omada Viz** desktop shortcut (created by
 `install.ps1`), or:
@@ -255,10 +258,11 @@ clean slate).
 
 ## Troubleshooting
 
-- **No data arriving?** Check the ER8411's remote-log target is this PC's
-  *current* LAN IP (`ipconfig`) - a DHCP lease change silently orphans the
-  stream. A DHCP reservation fixes it for good. Also confirm the receiver
-  task is Running (`Get-ScheduledTask -TaskName 'Omada Syslog Receiver'`).
+- **No data arriving?** Check the Omada Controller's **Logs → Setting →
+  Advanced → Remote Logging** (or the ER8411's direct web UI) - confirm the
+  target is this PC's *current* LAN IP (`ipconfig`) - a DHCP lease change
+  silently orphans the stream. A DHCP reservation fixes it for good. Also
+  confirm the receiver task is Running (`Get-ScheduledTask -TaskName 'Omada Syslog Receiver'`).
 - **Port 514 already bound?** Another syslog service may have claimed it.
   The receiver refuses to share the port (deliberate); stop the other one.
 - **Viz won't start?** The default port is 8780 - if taken, use
