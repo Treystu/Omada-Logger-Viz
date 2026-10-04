@@ -102,7 +102,7 @@
       <button class="qbtn" data-mins="360" onclick="quickRange(360)">6h</button>
     </span>
   </div>
-  <div class="ctl" data-tip="Maximum dots drawn at once (busiest kept first when exceeded). Lower it if the page feels slow."><label>point cap</label><input id="fCap" type="number" value="40000" style="width:76px"></div>
+  <div class="ctl" data-tip="Maximum dots drawn at once (busiest kept first when exceeded). Lower it if the page feels slow."><label>point cap</label><input id="fCap" type="number" value="500000" style="width:76px"></div>
   <div class="ctl" data-tip="Refetch data every 30 s. Colors and zoom stay put; the time window slides forward quietly."><label>auto 30s</label><input id="chkAuto" type="checkbox" checked style="margin-top:4px"></div>
   <button id="btnStats" class="togbtn" onclick="toggleStats()">stats</button>
   <button id="togLegend" class="togbtn" data-tip="Toggle the color key on/off." onclick="toggleOverlay('legend')">key</button>
@@ -395,7 +395,7 @@ function applyFilters(){
   var fMin = parseInt($("fMin").value, 10) || 0;
   var fType = $("fType").value, fDs = $("fDs").value;
   var fFrom = $("fFrom").value, fTo = $("fTo").value;
-  var cap = parseInt($("fCap").value, 10) || 40000;
+  var cap = parseInt($("fCap").value, 10) || 500000;
   var out = [];
   for (var i = 0; i < allPoints.length; i++){
     var p = allPoints[i];
@@ -1135,7 +1135,7 @@ function resetFilters(){
   ["chkDirInt", "chkDirOut", "chkDirIn", "chkDirOth"].forEach(function(id){ $(id).checked = true; });
   $("fFrom").value = "";
   $("fTo").value = "";
-  $("fCap").value = "40000";
+  $("fCap").value = "500000";
   /* encodings too: this is "restore the default view" in full */
   $("selX").value = "ts";
   $("selY").value = "dpt";

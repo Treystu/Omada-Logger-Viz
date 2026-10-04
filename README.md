@@ -185,28 +185,37 @@ change):
   reverse the axis direction
 - **Brush zoom**: drag a rectangle on the chart to zoom into any region
   (dense clusters become readable); double-click, Esc, or the "reset zoom"
-  button zooms back out. Zoom holds across auto-refreshes.
+  button zooms back out. Zoom holds across auto-refreshes. Thin horizontal
+  or vertical bands zoom just the axis they span.
+- **Pattern spotlight**: click any dot to grey the noise and pop its related
+  traffic — same conversation (white-ringed), same host pair, same service
+  — making patterns visible at a glance. Esc or an empty click clears it.
+- **Color-key drilldown**: click a legend entry (an IP, a port, a severity)
+  to filter the entire view to that value. Click it again to remove it.
+- **Scoped stats panel**: unique counts (sources, destinations, ports,
+  flows, protocols), per-entry totals, and direction breakdown with
+  proportional bars — all reflecting whatever you've spotlighted, zoomed
+  into, or drilled down to.
 - **Color / point size**: src, dst, port, proto, severity, dataset,
   direction, or count (blue-to-red gradient, log-scaled for even spread).
-  Size also offers **per-group aggregates** - e.g. "distinct ports per
+  Size also offers **per-group aggregates** — e.g. "distinct ports per
   group" sizes each dot by how many different services its device talks to
   (grouping follows the color variable, then the categorical axis). Records
-  and flows per group act as traffic-quantity proxies - Omada's remote log
+  and flows per group act as traffic-quantity proxies — Omada's remote log
   doesn't include byte or packet totals.
-- **Precise filtering**: src/dst text match or its negation, dest-port
-  include/exclude lists with ranges (`443, 53, 1000-2000`), RFC1918
-  direction checkboxes in any combination (internal + inbound only, etc.),
-  flow vs msg, dataset, min count, time range, point cap - plus a one-click
-  "reset all".
+- **Precise filtering**: src/dst smart IP matching (single IPs, ranges
+  `192.168.0.100-200`, shorthand lists `192.168.0.1,2,3,6-10,12`, CIDR
+  `10.0.0.0/8`), dest-port include/exclude lists with ranges, RFC1918
+  direction checkboxes in any combination, flow vs msg, dataset, min count,
+  time range + quick-range buttons (15m/30m/60m/6h), point cap — plus a
+  one-click "reset all".
+- **32-color palette** with re-rank on filter changes — the top 12 visible
+  categories always get distinct, evenly-spread colors
+- **Legend + drawer visibility toggles**: persistent "key" and "detail"
+  buttons hide/show each panel independently
 - **Built-in help**: hover any control for a one-line explanation, or hit
   the "?" button for the full how-to guide.
-- **Pattern spotlight**: click any dot to grey the noise and pop its related
-  traffic - the same conversation (white-ringed), the same host pair, and
-  the same service - making patterns visible at a glance. Esc or an empty
-  click clears it.
-- Category colors are sticky and assigned by frequency rank, so the largest
-  categories always get distinct, evenly-spread colors
-- Hover for a summary; click a point for the full tally entry
+- Hover for a summary; click a point for the full tally entry.
 - Auto-refreshes every 30 s without disturbing the view (colors and zoom
   stay stable; time windows slide). Ctrl+C (or close the window) to stop.
   `--host 0.0.0.0` if you ever want to view it from the LAN.
