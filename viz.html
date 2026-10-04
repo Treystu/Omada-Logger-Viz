@@ -841,9 +841,18 @@ function draw(){
   for (i = 0; i < points.length; i++){
     var p = points[i];
     var vx = p[Xv], vy = p[Yv];
-    if (vx === null || vx === undefined || vy === null || vy === undefined) continue;
-    var px = sx.pos(vx), py = sy.pos(vy);
-    if (px === null || py === null) continue;
+    if (vx === null || vx === undefined) continue;  // X must have a value to plot
+    var px = sx.pos(vx);
+    if (px === null || isNaN(px)) continue;  // outside zoom domain
+    /* Plot null-Y points at the bottom edge so messages (dpt=null,
+       dst=null etc.) are always visible regardless of axis selection */
+    var py;
+    if (vy === null || vy === undefined){
+      py = y1;
+    } else {
+      py = sy.pos(vy);
+      if (py === null || isNaN(py)) py = y1;
+    }
     /* NaN-safe clip: fails closed on non-finite coordinates */
     if (!(px >= x0 - 4 && px <= x1 + 4 && py >= y0 - 4 && py <= y1 + 4)) continue;
     if (relMode){
