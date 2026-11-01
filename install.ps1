@@ -106,8 +106,8 @@ if (Test-Path -LiteralPath $wdScript) {
         -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero)
     Register-ScheduledTask -TaskName 'Omada Syslog Watchdog' -Action $wdAction -Trigger $wdTrigger `
         -Principal $wdPrincipal -Settings $wdSettings -Force `
-        -Description 'Restarts the receiver task if the raw log goes stale (hung process / post-sleep)' | Out-Null
-    Write-Host "Watchdog registered (every 5 min, 10 min stale threshold, 30 min restart cooldown)"
+        -Description 'Keeps the receiver (stale log) and viz (HTTP health) alive' | Out-Null
+    Write-Host "Watchdog registered (every 5 min: receiver stale-log restart + viz HTTP health heal)"
 }
 
 # --- desktop shortcut: one double-click to the viz ----------------------------
@@ -123,6 +123,20 @@ if (Test-Path -LiteralPath $vizScript) {
     if ($pyw) { $s.IconLocation = "$pyw,0" }
     $s.Save()
     Write-Host "Desktop shortcut created: $lnk"
+}
+
+# --- startup shortcut: bring the dashboard up right at logon (headless) --------
+if (-not $VizBoot -and $pyw) {
+    $stratLnk = Join-Path ([Environment]::GetFolderPath('Startup')) 'Omada Viz.lnk'
+    $ws2 = New-Object -ComObject WScript.Shell
+    $s2 = $ws2.CreateShortcut($stratLnk)
+    $s2.TargetPath = $pyw
+    $s2.Arguments = '"' + (Join-Path $PSScriptRoot 'omada_viz.py') + '" --port 8780'
+    $s2.WorkingDirectory = $PSScriptRoot
+    $s2.WindowStyle = 7
+    $s2.Description = 'Omada Logger & Viz - auto-start the traffic dashboard'
+    $s2.Save()
+    Write-Host "Startup shortcut created: $stratLnk"
 }
 
 # --- optional: always-on viz server (boot task) --------------------------------
