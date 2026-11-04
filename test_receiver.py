@@ -338,21 +338,64 @@ def main():
           and any(v.get("template") == "system message gamma" for v in st.values()),
           r.stdout.strip())
 
-    # 14. catch-up marker gone: tallying must continue (not disable)
+    # 14. a missing catch-up marker disables condensation rather than advancing
+    #     the checkpoint past records that were not recovered
     c6 = os.path.join(tmp, "cond6.json")
     with open(c6, "w", encoding="utf-8") as f:
         json.dump({"_meta": {"records": 1, "keys": 1, "replay_last_hash": "deadbeef"},
                    "msg|9.9.9.9|1|old": {"type": "msg", "from": "9.9.9.9", "sev": 1,
                                          "template": "old", "count": 1, "first": "x",
                                          "last": "y", "occurrences": []}}, f)
-    rx = start_rx(5156, c6, ["--condense-every", "1"])
+    appdata = os.path.join(tmp, "appdata")
+    env = os.environ.copy()
+    env["LOCALAPPDATA"] = appdata
+    rxlog6 = os.path.join(tmp, "rx5156.log")
+    rx = subprocess.Popen(
+        [sys.executable, RECEIVER, "--port", "5156", "--allow", "127.0.0.1",
+         "--log-file", rxlog6, "--condense-file", c6, "--condense-every", "1"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
     try:
+        check("receiver binds port 5156", wait_port_taken(5156))
         send_port(flow_payload(1, dst="10.9.9.9"), 5156)
         time.sleep(2.5)
         st = load_cond(c6)
         flows = [v for v in st.values() if v.get("type") == "flow"]
-        check("condenser: missing catch-up marker skips fold but keeps tallying",
-              bool(flows) and flows[0]["count"] == 1, "flows=%d" % len(flows))
+        diagnostic_path = os.path.join(appdata, "OmadaSyslog", "recovery-status.json")
+        with open(diagnostic_path, encoding="utf-8") as f:
+            diagnostic = json.load(f)
+        check("condenser: missing marker keeps ingestion but leaves store/checkpoint unchanged",
+              alive(rx) and not flows and st.get("_meta", {}).get("replay_last_hash") == "deadbeef",
+              "alive=%s flows=%d marker=%s" %
+              (alive(rx), len(flows), st.get("_meta", {}).get("replay_last_hash")))
+        check("condenser: recovery failure publishes persistent safe diagnostic",
+              diagnostic.get("status") == "recovery_failed"
+              and diagnostic.get("reason") == "checkpoint_missing"
+              and "updated_at" in diagnostic
+              and set(diagnostic) == {"status", "updated_at", "reason"},
+              repr(diagnostic))
+    finally:
+        stop_rx(rx)
+
+    # A later successful recovery clears the persistent warning.
+    valid_raw = os.path.join(tmp, "valid-marker.log")
+    valid_body = "2026-10-01T10:00:00.000-10:00\t127.0.0.1\t<134>saved"
+    with open(valid_raw, "w", encoding="utf-8", newline="") as f:
+        f.write(valid_body + "\n")
+    valid_cond = os.path.join(tmp, "valid-marker.json")
+    with open(valid_cond, "w", encoding="utf-8") as f:
+        json.dump({"_meta": {"records": 1,
+                             "replay_last_hash": __import__("hashlib").sha1(
+                                 valid_body.encode()).hexdigest(),
+                             "replay_offset": len((valid_body + "\n").encode())}}, f)
+    rx = subprocess.Popen(
+        [sys.executable, RECEIVER, "--port", "5158", "--allow", "127.0.0.1",
+         "--log-file", valid_raw, "--condense-file", valid_cond],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+    try:
+        check("receiver binds port 5158", wait_port_taken(5158))
+        time.sleep(0.3)
+        check("condenser: successful recovery clears prior diagnostic",
+              not os.path.exists(diagnostic_path))
     finally:
         stop_rx(rx)
 
@@ -486,6 +529,112 @@ def main():
                 "192.168.0" not in t and "2C-1B" not in t)
         check("condenser: masked template has <ip>/<mac> placeholders, no raw values",
               ok_t, t[:120])
+
+    # 19. exact offsets distinguish duplicate raw lines during restart recovery
+    raw_dup = os.path.join(tmp, "duplicate-lines.log")
+    dup_body = "2026-10-01T10:00:00.000-10:00\t127.0.0.1\t<134>same message"
+    dup_line = dup_body + "\n"
+    with open(raw_dup, "w", encoding="utf-8", newline="") as f:
+        f.write(dup_line + dup_line +
+                "2026-10-01T10:00:01.000-10:00\t127.0.0.1\t<134>next message\n")
+    dup_store = os.path.join(tmp, "duplicate-lines.json")
+    resumed = oc.Condenser(dup_store, 5000000)
+    resumed.add("2026-10-01T10:00:00.000-10:00", "127.0.0.1", "<134>same message")
+    resumed.note_raw(dup_body, len(dup_line.encode("utf-8")))
+    resumed.flush()
+    replayed = oc.Condenser(dup_store, 5000000)
+    n_dup = replayed.catch_up(raw_dup)
+    replayed.flush()
+    check("condenser: byte offset resumes after the exact duplicate marker line",
+          n_dup == 2 and replayed.total == 3,
+          "folded=%d records=%d" % (n_dup, replayed.total))
+    with open(raw_dup, "w", encoding="utf-8") as f:
+        f.write(dup_line)
+    try:
+        replayed.catch_up(raw_dup)
+        offset_rejects_truncation = False
+    except RuntimeError:
+        offset_rejects_truncation = True
+    check("condenser: offset checkpoint rejects a truncated log",
+          offset_rejects_truncation)
+
+    # Legacy stores lack offsets; repeated identical marker lines are ambiguous
+    # and must be surfaced instead of choosing one silently.
+    legacy_store = os.path.join(tmp, "legacy-marker.json")
+    with open(legacy_store, "w", encoding="utf-8") as f:
+        json.dump({"_meta": {"records": 2, "replay_last_hash":
+                             __import__("hashlib").sha1(dup_body.encode()).hexdigest()}}, f)
+    with open(raw_dup, "w", encoding="utf-8", newline="") as f:
+        f.write(dup_line + dup_line +
+                "2026-10-01T10:00:01.000-10:00\t127.0.0.1\t<134>next message\n")
+    legacy = oc.Condenser(legacy_store, 5000000)
+    try:
+        legacy.catch_up(raw_dup)
+        legacy_rejects_ambiguity = False
+    except RuntimeError:
+        legacy_rejects_ambiguity = True
+    check("condenser: legacy duplicate hash marker reports ambiguity",
+          legacy_rejects_ambiguity and legacy.total == 2 and legacy.replay_offset is None,
+          "records=%d" % legacy.total)
+
+    # 20. an existing store is bounded immediately when opened with a lower cap
+    oversized_store = os.path.join(tmp, "oversized-store.json")
+    loaded_entries = {}
+    for i in range(6):
+        loaded_entries["msg|k%d" % i] = {
+            "type": "msg", "count": 1, "first": "x", "last": "%02d" % i,
+            "occurrences": []}
+    with open(oversized_store, "w", encoding="utf-8") as f:
+        json.dump({"_meta": {"records": 6}, **loaded_entries}, f)
+    bounded = oc.Condenser(oversized_store, 5000000, max_keys=3)
+    check("condenser: loaded state is immediately reduced to max keys",
+          len(bounded.state) == 3 and "msg|k5" in bounded.state,
+          "keys=%d" % len(bounded.state))
+
+    exact_cap_store = os.path.join(tmp, "exact-cap-store.json")
+    with open(exact_cap_store, "w", encoding="utf-8") as f:
+        json.dump({"_meta": {"records": 3}, **{k: loaded_entries[k] for k in
+                  ("msg|k0", "msg|k1", "msg|k2")}}, f)
+    exact_cap = oc.Condenser(exact_cap_store, 5000000, max_keys=3)
+    check("condenser: loading exactly max keys retains every tally",
+          len(exact_cap.state) == 3 and all("msg|k%d" % i in exact_cap.state for i in range(3)),
+          "keys=%d" % len(exact_cap.state))
+
+    # Trimming shifts a still-present marker to a different offset; recovery
+    # must reject it instead of treating a later record as the checkpoint.
+    raw_rot = os.path.join(tmp, "trimmed-marker.log")
+    prefix = ("prefix record 1\n" + "prefix record 2\n" + "prefix record 3\n")
+    suffix = "2026-10-01T10:00:02.000-10:00\t127.0.0.1\t<134>after marker\n"
+    with open(raw_rot, "w", encoding="utf-8", newline="") as f:
+        f.write(prefix + dup_line + suffix)
+    rot_store = os.path.join(tmp, "trimmed-marker.json")
+    rot = oc.Condenser(rot_store, 5000000)
+    rot.add("2026-10-01T10:00:00.000-10:00", "127.0.0.1", "<134>same message")
+    rot.note_raw(dup_body, len((prefix + dup_line).encode("utf-8")))
+    rot.flush()
+    rot = oc.Condenser(rot_store, 5000000)
+    keep = len((dup_line + suffix).encode("utf-8")) + 1
+    rec.trim_file(raw_rot, cap_bytes=keep, keep_pct=100)
+    marker_before = rot.replay_marker
+    try:
+        rot.catch_up(raw_rot)
+        trim_rejected_checkpoint = False
+    except RuntimeError:
+        trim_rejected_checkpoint = True
+    check("condenser: trimmed log with shifted marker is rejected unchanged",
+          trim_rejected_checkpoint and rot.replay_marker == marker_before and rot.total == 1)
+
+    # 21. tail zero means no output (Python's [-0:] would return everything)
+    parser_log = os.path.join(tmp, "parser-tail.log")
+    with open(parser_log, "w", encoding="utf-8") as f:
+        f.write("2026-10-01T10:00:00.000-10:00\t127.0.0.1\t<14>one\n")
+        f.write("2026-10-01T10:00:01.000-10:00\t127.0.0.1\t<14>two\n")
+    parser = os.path.join(HERE, "syslog_parser.py")
+    r = subprocess.run([sys.executable, parser, "--log-file", parser_log, "--raw", "-n", "0"],
+                       capture_output=True, text=True)
+    check("syslog parser: --tail 0 prints no lines",
+          r.returncode == 0 and r.stdout == "",
+          "rc=%d stdout=%r stderr=%r" % (r.returncode, r.stdout, r.stderr))
 
     print()
     if failures:

@@ -21,7 +21,8 @@ DEFAULT_LOG = os.path.join(os.environ.get("LOCALAPPDATA")
                            "OmadaSyslog", "firewall.log")
 
 FACILITIES = ["kern", "user", "mail", "daemon", "auth", "syslog", "lpr", "news",
-              "uucp", "cron", "authpriv", "ftp", "ntp", "audit", "alert", "clock"]
+              "uucp", "cron", "authpriv", "ftp", "ntp", "audit", "alert", "clock",
+              "local0", "local1", "local2", "local3", "local4", "local5", "local6", "local7"]
 SEVERITIES = ["emerg", "alert", "crit", "err", "warning", "notice", "info", "debug"]
 
 LINE_RE = re.compile(r"^(?P<ts>\S+)\t(?P<src>\S+)\t(?P<raw>.*)$")
@@ -93,7 +94,7 @@ def main():
                 out.append("%s  %-15s  %-14s  %s" % (ts, src, level, msg))
 
     if a.tail is not None:
-        out = out[-a.tail:]
+        out = [] if a.tail == 0 else out[-a.tail:]
     if out:
         sys.stdout.write("\n".join(out) + "\n")
     return 0

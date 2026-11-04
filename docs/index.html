@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Omada Logger & Viz — Free Windows Syslog Server & Traffic Visualizer for TP-Link Omada</title>
-<meta name="description" content="Free, zero-dependency syslog receiver for Windows. Collect TP-Link Omada firewall (ER8411) remote logging on UDP 514, condense it into per-flow tallies, and explore your network traffic live in a browser scatterplot. No signup, nothing for sale.">
+<meta name="description" content="Free, zero-dependency syslog receiver for Windows. Collect TP-Link Omada firewall remote logging on UDP 514, search per-event history including DHCP allocation observations, condense flows, and explore traffic in a browser. No signup, nothing for sale.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://treystu.github.io/Omada-Logger-Viz/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Omada Logger & Viz">
 <meta property="og:title" content="Omada Logger & Viz — Free Windows Syslog Server & Traffic Visualizer for TP-Link Omada">
-<meta property="og:description" content="Point your Omada firewall at this PC and watch your network live: UDP 514 receiver, flow-tally condenser, interactive browser scatterplot. Zero dependencies, MIT licensed.">
+<meta property="og:description" content="Point your Omada firewall at this PC: UDP 514 receiver, searchable per-event and DHCP history, flow-tally condenser, and interactive browser scatterplot. Zero third-party dependencies, MIT licensed.">
 <meta property="og:url" content="https://treystu.github.io/Omada-Logger-Viz/">
 <meta property="og:image" content="https://treystu.github.io/Omada-Logger-Viz/img/viz-outbound-log.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -29,7 +29,7 @@
       "url": "https://treystu.github.io/Omada-Logger-Viz/",
       "applicationCategory": "UtilitiesApplication",
       "operatingSystem": "Windows",
-      "description": "Free, zero-dependency Windows syslog receiver, condenser, and real-time traffic visualizer for TP-Link Omada firewalls. Listens on UDP 514, records to a 50 MB rolling log, tallies flows, and renders a live interactive scatterplot.",
+      "description": "Free Windows syslog receiver, condenser, searchable per-event history, and real-time traffic visualizer for TP-Link Omada firewalls. Listens on UDP 514, keeps a 50 MB rolling log, a bounded SQLite event index, and renders a live interactive scatterplot.",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
       "license": "https://spdx.org/licenses/MIT",
       "author": { "@type": "Person", "name": "Lucas Ballek" },
@@ -37,9 +37,10 @@
       "screenshot": "https://treystu.github.io/Omada-Logger-Viz/img/viz-default.png",
       "featureList": [
         "UDP 514 syslog receiver with 50 MB rolling raw log",
+        "Searchable per-event SQLite history with DHCP allocation observations",
         "Ingestion-time condenser: flows tally to src/dst/proto/port counts with recent occurrence timestamps",
         "Interactive browser scatterplot: swappable axes, log scale, RFC1918 direction slicing",
-        "Boot-start scheduled task with crash recovery and staleness watchdog",
+        "Checkpointed restart recovery when the saved raw-log checkpoint remains available, plus a receiver-health watchdog",
         "Zero dependencies - pure Python 3 stdlib and vanilla JS"
       ]
     },
@@ -59,7 +60,7 @@
         {
           "@type": "Question",
           "name": "Where does my data go?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Nowhere. Everything stays on your PC: the raw log and tallies live in your local AppData, the visualization is served on localhost only, and no data is sent to any server." }
+          "acceptedAnswer": { "@type": "Answer", "text": "By default, logs, tallies, and searchable event history stay in your local AppData; the app sends no telemetry. The dashboard binds to localhost by default. If you choose to serve its chart to your LAN, event search and full raw-event views remain restricted to the local computer, and the chart API redacts message bodies; templates can still contain identifying information." }
         },
         {
           "@type": "Question",
@@ -142,7 +143,7 @@
   <div class="stats">
     <div class="stat"><div class="v">$0</div><div class="l">Free, always &mdash; donations optional</div></div>
     <div class="stat"><div class="v">0 deps</div><div class="l">Pure Python stdlib + vanilla JS</div></div>
-    <div class="stat"><div class="v">Localhost</div><div class="l">Your data never leaves your PC</div></div>
+    <div class="stat"><div class="v">Local by default</div><div class="l">No telemetry; dashboard binds to localhost</div></div>
     <div class="stat"><div class="v">MIT</div><div class="l">Open source, inspect everything</div></div>
   </div>
 </div>
@@ -163,16 +164,23 @@
       Runs headless from boot as a per-user scheduled task.</p>
     </div>
     <div class="card">
+      <h3>Search event history</h3>
+      <p>A local SQLite index keeps searchable per-event records, including
+      observed DHCP address allocations and other activity. Its default
+      500 MiB retention target is separate from the 50 MB raw log; DHCP
+      observations are historical records, not a current lease table.</p>
+    </div>
+    <div class="card">
       <h3>Condense the firehose</h3>
       <p>Every record is tallied at ingestion: flows fold into
       <b>src &rarr; dst/proto/port</b> counts with first/last seen and the 20
       most recent occurrence timestamps; repeated alerts fold into message
-      templates. A week of syslog becomes a few thousand meaningful entries,
-      with exactly-once crash recovery.</p>
+      templates. Tallies persist across restarts; recovery resumes from the
+      saved raw-log checkpoint when it is still present.</p>
     </div>
     <div class="card">
       <h3>Visualize live</h3>
-      <p>An interactive scatterplot on localhost: swappable X/Y axes,
+      <p>An interactive scatterplot, on localhost by default: swappable X/Y axes,
       color and size encodings, log scale, RFC1918 direction slicing
       (internal / outbound / inbound / other), drag-to-zoom on any region,
       per-group aggregate sizing, pattern spotlight — click any dot to grey
@@ -200,15 +208,32 @@
 
 <section id="start" class="container">
   <h2>Quick<span class="hl">start</span></h2>
-  <pre><span class="c"># Windows 10/11, Python 3.8+ on PATH</span>
+<p>For the recommended no-Git install, get the versioned Windows ZIP asset
+from the <a href="https://github.com/Treystu/Omada-Logger-Viz/releases/latest">latest GitHub release</a>
+(for v1.4.0, <code>Omada-Logger-Viz-v1.4.0-windows.zip</code>), then use File Explorer's
+<strong>Extract All</strong>. Open PowerShell in the extracted project folder.
+For Git, use the optional clone commands below. Keep the extracted folder in
+place after installation; the scheduled tasks use its path.</p>
+<pre><span class="c"># Windows 10/11, Python 3.8+ code target (tested with Python 3.14.6)</span>
+python --version
+
+<span class="c"># Optional Git install (skip these two commands for the ZIP):</span>
 git clone https://github.com/Treystu/Omada-Logger-Viz.git
-cd Omada-Logger-Viz
+Set-Location Omada-Logger-Viz
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\install.ps1        <span class="c"># one UAC prompt: firewall rule + boot task + watchdog</span>
 
 <span class="c"># Omada Controller: Logs > Setting > Advanced > Remote Logging</span>
 <span class="c">#   Enable, point to this PC's LAN IP, port 514, More Detail Logs on</span>
 
-python omada_viz.py  <span class="c"># open http://localhost:8780</span></pre>
+<span class="c"># Default: hidden dashboard server starts at logon; click the desktop
+# shortcut to open the browser. Optional boot-start server:</span>
+.\install.ps1 -VizBoot</pre>
+  <p style="color:var(--mut)">The default receiver allowlist and firewall rule accept UDP 514 from
+  <code>192.168.0.0/24</code>. If your LAN uses another subnet, update both
+  the receiver <code>--allow</code> setting and the firewall rule. The dashboard
+  data folder is <code>%LOCALAPPDATA%\OmadaSyslog</code>; the index begins a
+  backfill from raw lines still retained on first use.</p>
 </section>
 
 <section id="faq" class="container faq">
@@ -227,9 +252,11 @@ python omada_viz.py  <span class="c"># open http://localhost:8780</span></pre>
   </details>
   <details>
     <summary>Where does my data go?</summary>
-    <p>Nowhere. Everything stays on your PC: the raw log and tallies live in
-    your local AppData, the visualization is served on localhost only, and
-    no data is sent to any server.</p>
+    <p>By default, the raw log, tallies, and searchable event index stay in
+    your local AppData; no telemetry is sent. The dashboard binds to localhost
+    by default. If you deliberately serve the chart to your LAN, its API
+    redacts message bodies, but templates may still contain identifying
+    information. Event search and full raw-event views remain local-only.</p>
   </details>
   <details>
     <summary>Why UDP only &mdash; and why Windows only?</summary>
@@ -265,7 +292,6 @@ python omada_viz.py  <span class="c"># open http://localhost:8780</span></pre>
 <footer>
   <div class="container">
     <p><a href="https://github.com/Treystu/Omada-Logger-Viz">Source on GitHub</a>
-    &middot; <a href="https://github.com/Treystu/Omada-Logger-Viz/releases/tag/v1.0.0">v1.0.0</a>
     &middot; MIT License</p>
     <p>Built and given away by Lucas Ballek.</p>
   </div>

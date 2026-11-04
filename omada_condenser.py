@@ -18,10 +18,10 @@ size cap, entries with the oldest last-seen time are evicted (stalest first).
 The number of distinct keys in RAM is hard-bounded too. Tallies survive
 restarts: the state is loaded at startup.
 
-Exactly-once crash recovery: every flush persists the hash of the last raw
-line whose record is reflected in the tallies. On startup the receiver
-"folds" raw-log lines that come after that marker, so records lost from
-memory by a crash are recovered exactly once (see catch_up()).
+Crash recovery: every flush persists a hash and byte offset for the last raw
+line reflected in the tallies. On startup, raw-log lines after that checkpoint
+are folded into the state. Legacy stores contain only a hash; repeated
+identical lines make that older checkpoint inherently ambiguous.
 
 Standalone use:
     python omada_condenser.py --replay [rawlog]   # fold raw backlog into tallies
@@ -68,7 +68,9 @@ class Condenser:
         self.state = {}
         self.total = 0
         self.replay_marker = None   # persisted: hash of last raw line folded/tallied
+        self.replay_offset = None   # persisted: byte offset just after that line
         self.ingest_marker = None   # runtime: hash of last raw line ingested live
+        self.ingest_offset = None
         self.dirty = False
         self.last_flush = time.time()
         self._load()
@@ -84,6 +86,8 @@ class Condenser:
                 self.state = {k: v for k, v in loaded.items() if isinstance(v, dict)}
                 self.total = int(meta.get("records", 0))
                 self.replay_marker = meta.get("replay_last_hash")
+                self.replay_offset = meta.get("replay_offset")
+                self._ensure_capacity(reserve=0)
         except (OSError, ValueError):
             self.state = {}
 
@@ -95,11 +99,13 @@ class Condenser:
         if not self.dirty:
             return False
         marker = self.ingest_marker or self.replay_marker
+        offset = self.ingest_offset if self.ingest_marker else self.replay_offset
         self.state["_meta"] = {
             "records": self.total,
             "keys": len(self.state),
             "last_flush": datetime.now().astimezone().isoformat(timespec="seconds"),
             "replay_last_hash": marker,
+            "replay_offset": offset,
         }
         try:
             data = json.dumps(self.state, separators=(",", ":"), ensure_ascii=False)
@@ -142,19 +148,22 @@ class Condenser:
             total -= sizes[k]
             del self.state[k]
 
-    def _ensure_capacity(self):
-        """Hard RAM bound: when at max_keys, evict the stalest ~5%."""
-        if len(self.state) < self.max_keys:
+    def _ensure_capacity(self, reserve=1):
+        """Enforce the key cap, optionally leaving room for a new tally."""
+        cap = max(1, int(self.max_keys))
+        target = max(0, cap - reserve)
+        if len(self.state) <= target:
             return
         entries = sorted(self.state.items(), key=lambda kv: kv[1].get("last", ""))
-        for k, _ in entries[:max(1, len(entries) // 20)]:
+        for k, _ in entries[:len(entries) - target]:
             del self.state[k]
 
     # -- ingestion -----------------------------------------------------------
 
-    def note_raw(self, body):
-        """Record the hash of the last raw log line (sans newline) ingested."""
+    def note_raw(self, body, offset=None):
+        """Record the raw line marker and optional end offset in the log."""
         self.ingest_marker = hashlib.sha1(body.encode("utf-8", "replace")).hexdigest()
+        self.ingest_offset = offset
 
     def add(self, recv_time, src_ip, raw):
         m = FLOW_RE.search(raw)
@@ -216,22 +225,56 @@ class Condenser:
 
     # -- crash recovery / backlog -------------------------------------------
 
-    def catch_up(self, raw_path, force=False):
+    def catch_up(self, raw_path, force=False, progress=None):
         """Fold raw-log lines after the persisted marker into the tallies.
         Returns the number of lines folded. Raises RuntimeError if the marker
-        line is no longer present (trimmed away) unless force=True."""
+        line is no longer present (trimmed away) unless force=True. An optional
+        callback runs periodically during large recovery scans."""
         try:
-            with open(raw_path, encoding="utf-8", errors="replace") as f:
-                lines = [l.rstrip("\n") for l in f]
+            with open(raw_path, "rb") as f:
+                raw_lines = []
+                read_count = 0
+                while True:
+                    start_offset = f.tell()
+                    data = f.readline()
+                    if not data:
+                        break
+                    raw_lines.append((start_offset, f.tell(),
+                                      data.rstrip(b"\r\n").decode("utf-8", "replace")))
+                    read_count += 1
+                    if progress and read_count % 256 == 0:
+                        progress()
         except FileNotFoundError:
             return 0
         start = 0
         if self.replay_marker:
             start = None
-            for i, l in enumerate(lines):
-                if hashlib.sha1(l.encode("utf-8", "replace")).hexdigest() == self.replay_marker:
-                    start = i + 1
-                    break
+            if self.replay_offset is not None:
+                # New checkpoints carry an exact byte position, so repeated
+                # identical lines cannot move the resume point backwards.
+                for i, (line_start, line_end, line) in enumerate(raw_lines):
+                    if progress and i % 256 == 0:
+                        progress()
+                    if (line_end == self.replay_offset and
+                            hashlib.sha1(line.encode("utf-8", "replace")).hexdigest()
+                            == self.replay_marker):
+                        start = i + 1
+                        break
+            else:
+                # A hash-only checkpoint cannot distinguish repeated lines.
+                # Refuse ambiguity rather than silently skipping a record.
+                matches = []
+                for i, (_, _, line) in enumerate(raw_lines):
+                    if progress and i % 256 == 0:
+                        progress()
+                    if hashlib.sha1(line.encode("utf-8", "replace")).hexdigest() == self.replay_marker:
+                        matches.append(i)
+                if len(matches) > 1:
+                    raise RuntimeError(
+                        "legacy replay marker is ambiguous in %s; re-run with --force "
+                        "to fold the entire current file" % raw_path)
+                if matches:
+                    start = matches[0] + 1
             if start is None:
                 if not force:
                     raise RuntimeError(
@@ -239,15 +282,19 @@ class Condenser:
                 start = 0
         folded = 0
         last = None
-        for l in lines[start:]:
+        for i, (_, line_end, l) in enumerate(raw_lines[start:]):
+            if progress and i % 256 == 0:
+                progress()
             parts = l.split("\t", 2)
             if len(parts) != 3 or not parts[2]:
                 continue
             self.add(parts[0], parts[1], parts[2])
             folded += 1
             last = l
+            last_offset = line_end
         if folded and last is not None:
             self.replay_marker = hashlib.sha1(last.encode("utf-8", "replace")).hexdigest()
+            self.replay_offset = last_offset
         return folded
 
 

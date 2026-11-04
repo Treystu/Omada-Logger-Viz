@@ -14,8 +14,103 @@
   #btnGo{background:#2b4a6f;color:#e6ebf2;border:1px solid #3d5f8f;border-radius:4px;padding:4px 12px;cursor:pointer}
   #btnGo:hover{background:#35608f}
   #status{margin-left:auto;color:#8a93a3;font-size:12px;padding-bottom:4px;max-width:440px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:120px}
+  #sourceStatus{flex:none;padding:5px 10px;border-bottom:1px solid #2a2f3a;background:#171b22;color:#8a93a3;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #sourceStatus.error{color:#ffb26b;background:#241d19}
+  #recoveryStatus{flex:none;padding:5px 10px;border-bottom:1px solid #2a2f3a;background:#171b22;color:#8a93a3;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #recoveryStatus.failed,#recoveryStatus.unknown.error{color:#ffb26b;background:#241d19}
+  #eventsPanel{position:fixed;inset:18px;background:#161a21;border:1px solid #3a4254;border-radius:10px;z-index:30;display:none;flex-direction:column;box-shadow:0 12px 44px rgba(0,0,0,.65)}
+  #eventsHead{flex:none;padding:14px 18px;border-bottom:1px solid #2a2f3a;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  #eventsHead h3{margin:0;color:#7fd0ff;font-size:15px}
+  #eventsNote{color:#8a93a3;font-size:11.5px;flex:1;min-width:240px}
+  #eventPageStatus{flex:none;padding:8px 18px;color:#aeb7c6;font-size:11.5px;border-bottom:1px solid #2a2f3a}
+  #eventList{flex:1;min-height:0;overflow:auto;padding:8px 14px}
+  .eventRow{border-bottom:1px solid #2a2f3a;padding:9px 6px}
+  .eventMeta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:#9aa4b3;font-size:11px}
+  .eventType{font-weight:700;color:#7fd0ff;text-transform:uppercase;letter-spacing:.04em}
+  .eventPreview{color:#d7dce3;font-size:12px;margin:4px 0;overflow-wrap:anywhere}
+  .eventRow details summary{color:#8a93a3;font-size:11px;cursor:pointer}
+  .eventRaw,.eventParsed{white-space:pre-wrap;word-break:break-word;font:11px/1.45 ui-monospace,Consolas,monospace;color:#c4cbd5;background:#11141a;padding:8px;border-radius:4px;margin:6px 0}
+  .eventParsed{color:#9cacbf}
+  #eventError{color:#ffb26b}
+  #eventIndexPanel{position:fixed;inset:14px;background:#161a21;border:1px solid #3a4254;border-radius:10px;z-index:32;display:none;flex-direction:column;box-shadow:0 12px 44px rgba(0,0,0,.65)}
+  #eventIndexHead{flex:none;padding:12px 16px;border-bottom:1px solid #2a2f3a;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  #eventIndexHead h3{margin:0;color:#7fd0ff;font-size:15px}
+  #eventIndexTabs{display:flex;gap:6px}
+  #eventIndexFilters{display:flex;gap:8px;align-items:end;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid #2a2f3a}
+  #eventIndexFilters input{width:120px} #eventIndexFilters #eventIdxQ{width:min(240px,45vw)}
+  #eventIndexStatus{padding:8px 16px;color:#aeb7c6;font-size:11.5px;line-height:1.5;border-bottom:1px solid #2a2f3a}
+  #eventIndexNote{color:#8295aa;margin-top:3px}
+  #eventIndexList{flex:1;min-height:0;overflow:auto;padding:8px 14px}
+  .indexedEvent{border-bottom:1px solid #2a2f3a;padding:10px 6px}
+  .indexedEventMeta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:#9aa4b3;font-size:11px}
+  .indexedEventTitle{font-weight:700;color:#7fd0ff}
+  .indexedEventFields{font-size:12px;color:#d7dce3;margin:4px 0;overflow-wrap:anywhere}
+  .indexedEvent details summary{color:#8a93a3;font-size:11px;cursor:pointer}
+  .indexedEvent pre{white-space:pre-wrap;word-break:break-word;font:11px/1.45 ui-monospace,Consolas,monospace;color:#c4cbd5;background:#11141a;padding:8px;border-radius:4px;margin:6px 0}
+  #eventIdxError{color:#ffb26b}
   #wrap{flex:1 1 auto;position:relative;min-height:0;overflow:hidden}
   #plot{position:absolute;inset:0;cursor:crosshair;touch-action:none}
+  #messageView{position:absolute;inset:0;overflow:auto;padding:18px;display:none;box-sizing:border-box}
+  #messageCoverage{color:#8a93a3;font-size:12px;margin:0 0 14px;line-height:1.5}
+  #messageTools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
+  #messageTools input{width:min(340px,55vw)}
+  #messagePageStatus{font-size:11px;color:#aeb7c6;min-width:140px;text-align:center}
+  #messageViewModes{display:flex;gap:5px;align-items:center;margin:0 0 8px;flex-wrap:wrap}
+  #messageSizeLegend{font-size:11px;color:#9aa4b3;margin:4px 10px 10px;line-height:1.5}
+  .messageSizeKey{display:inline-flex;gap:10px;align-items:end;margin-left:10px;vertical-align:middle}
+  .messageSizeSample{display:inline-flex;gap:4px;align-items:center;color:#8295aa;font-size:10px}
+  .messageSizeDot{display:inline-block;border:1px solid #7fd0ff;border-radius:50%;background:#2b506d;box-sizing:border-box;flex:none}
+  #messageBubbles{position:relative;display:block;min-height:240px;margin:8px 0;padding:8px;overflow:hidden;border:1px solid #2c3542;border-radius:8px;background:radial-gradient(ellipse at center,#1b222c,#141920)}
+  .messagePackCircle{position:absolute;display:flex;align-items:center;justify-content:center;box-sizing:border-box;border:1px solid rgba(255,255,255,.58);border-radius:50%;padding:0;color:#fff;cursor:pointer;overflow:hidden;box-shadow:inset 0 1px 5px rgba(255,255,255,.16),0 2px 5px rgba(0,0,0,.35);transition:filter .12s,transform .12s}
+  .messagePackCircle:hover,.messagePackCircle:focus-visible{z-index:2;filter:brightness(1.25);outline:2px solid #fff;outline-offset:1px;transform:scale(1.035)}
+  .messagePackCircle span{font-size:10px;font-weight:700;text-shadow:0 1px 3px #000;white-space:nowrap;pointer-events:none}
+  #messageHoverDetails{display:none;position:fixed;z-index:1000;box-sizing:border-box;width:min(560px,calc(100vw - 24px));max-height:min(65vh,560px);overflow:auto;padding:12px;background:#10151d;color:#dce5ef;border:1px solid #6da7cf;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.55);font:11px/1.45 ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+  #messageHoverDetails:focus{outline:2px solid #7fd0ff}
+  .messageActivityLegend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 8px 8px;font-size:10px;color:#b9cde0}
+  .messageLegendItem{display:inline-flex;gap:5px;align-items:center}
+  .messageLegendSwatch{width:9px;height:9px;border-radius:50%;border:1px solid #ffffff66}
+  .activityCluster{border:1px solid #344050;border-left:4px solid #4f8bb7;border-radius:9px;background:#191f28;padding:12px 14px;min-width:0}
+  .activityHead{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;border-bottom:1px solid #2a3340;padding-bottom:8px;margin-bottom:10px}
+  .activityName{font-size:14px;font-weight:700;color:#7fd0ff}
+  .activityCount{font-size:12px;color:#d7dce3}
+  .activityId{font-size:10px;color:#728096}
+  .activityVariants{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+  .activityVariants{align-items:flex-start;gap:12px}
+  .activityObserved{font-size:11px;line-height:1.5;color:#9db3c9;margin:-2px 0 10px;white-space:pre-line;overflow-wrap:anywhere}
+  .activityEvidenceTitle{font-size:10px;color:#8295aa;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
+  .activityField,.sampleField{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:3px 0}
+  .valueFieldName{font-size:10px;color:#8a9bae}
+  .valueChip{display:inline-block;border:1px solid #40566d;background:#202b38;color:#c6d8e9;border-radius:12px;padding:2px 8px;font:10.5px/1.4 ui-monospace,Consolas,monospace;overflow-wrap:anywhere;max-width:100%}
+  .valueChip .chipCount{color:#839bb2;margin-left:5px}
+  .bubbleItem{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:5px;flex:0 1 150px;min-width:64px;max-width:180px;min-height:64px;padding:6px;background:transparent;color:#d7dce3;border:1px solid transparent;border-radius:8px;text-align:center;cursor:pointer}
+  .bubbleItem:hover,.bubbleItem:focus-visible{border-color:#7fd0ff;background:#1d2631;outline:2px solid #7fd0ff;outline-offset:1px}
+  .msgBubble{display:block;flex:none;border:1px solid #7ca5c6;border-radius:50%;background:radial-gradient(circle at 35% 30%,#477da3,#203b52);box-sizing:border-box;box-shadow:0 2px 9px rgba(0,0,0,.35);pointer-events:none}
+  .bubbleCaption{font-size:10px;line-height:1.3;max-width:100%;overflow-wrap:anywhere;color:#b9cde0}
+  .bubbleCaption b{display:block;color:#7fd0ff;font-size:11px;font-variant-numeric:tabular-nums}
+  .messageRankedList{display:flex;flex-direction:column;gap:7px;padding:10px}
+  .messageRankedRow{display:grid;grid-template-columns:minmax(120px,1fr) minmax(80px,2fr) minmax(190px,4fr);gap:10px;align-items:center;text-align:left;background:#191f28;color:#d7dce3;border:1px solid #344050;border-radius:6px;padding:8px 10px;cursor:pointer;min-width:0}
+  .messageRankedRow:hover,.messageRankedRow:focus-visible{border-color:#7fd0ff;outline:2px solid #7fd0ff;outline-offset:1px}
+  .rankedActivity{color:#9db3c9;font-size:10px;overflow-wrap:anywhere}
+  .rankedPattern{font-size:11px;line-height:1.35;overflow-wrap:anywhere}
+  .rankedBarTrack{height:8px;background:#252d39;border-radius:5px;overflow:hidden}
+  .rankedBar{height:100%;background:#4f9ed0;border-radius:5px;min-width:1px}
+  .rankedValue{color:#7fd0ff;font-size:12px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+  #messageTime{padding:10px;overflow-x:auto}
+  .messageTimeGroup{display:grid;grid-template-columns:minmax(150px,1fr) 4fr;gap:12px;align-items:center;padding:8px;border-bottom:1px solid #2a3340}
+  .messageTimeActivity{font-size:11px;color:#b9cde0;overflow-wrap:anywhere}
+  .messageTimeBars{display:flex;gap:3px;align-items:end;min-height:58px;min-width:max-content}
+  .messageTimeBucket{position:relative;display:flex;align-items:end;justify-content:center;width:34px;height:58px;background:#202733;border-radius:3px 3px 0 0}
+  .messageTimeBar{width:100%;background:#4f9ed0;border-radius:3px 3px 0 0;min-height:1px}
+  .messageTimeBucket:hover .messageTimeTip{display:block}
+  .messageTimeBucket:focus-visible{outline:2px solid #7fd0ff;outline-offset:2px;z-index:2}
+  .messageTimeBucket:focus-visible .messageTimeTip{display:block}
+  .messageTimeTip{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);z-index:3;padding:4px 7px;background:#11141a;color:#e6ebf2;border:1px solid #3a4254;border-radius:4px;font-size:10px;white-space:nowrap}
+  .messageTimeAxis{display:flex;gap:3px;margin:0 0 6px 0;padding-left:calc(20% + 12px);color:#8295aa;font-size:9px}
+  .messageTimeAxis span{width:34px;overflow:visible;white-space:nowrap;text-align:center}
+  .messageTimeNote{color:#9aa4b3;font-size:11px;line-height:1.5;margin:4px 8px 10px}
+  @media(max-width:700px){.messageRankedRow{grid-template-columns:1fr auto}.messageRankedRow .rankedBarTrack{grid-column:1/-1}.messageTimeGroup{grid-template-columns:1fr}.messageTimeAxis{padding-left:8px}}
+  .mbVariables{font-size:10.5px;line-height:1.45;color:#9db3c9;overflow-wrap:anywhere;white-space:pre-line;margin-top:5px}
+  .mbVariables b{color:#b9cde0;font-weight:600}
   #tip{position:absolute;pointer-events:none;background:#1c212b;border:1px solid #3a4254;border-radius:6px;padding:7px 10px;font-size:12px;display:none;max-width:440px;box-shadow:0 4px 14px rgba(0,0,0,.5);line-height:1.5;z-index:5}
   #tip b{color:#7fd0ff}
   #detail{position:fixed;top:0;right:0;bottom:0;width:440px;background:#161a21;border-left:1px solid #2a2f3a;padding:14px;display:none;overflow:auto;z-index:10;box-sizing:border-box}
@@ -68,18 +163,19 @@
 </head>
 <body>
 <div id="bar">
-  <div class="ctl" data-tip="What the horizontal position of each dot means. time = when the record occurred (or first/last seen for tallies)."><label>X axis</label><select id="selX"></select></div>
-  <div class="ctl" data-tip="What the vertical position of each dot means. Categorical values get one lane each; numeric axes can use the Y scale option."><label>Y axis</label><select id="selY"></select></div>
-  <div class="ctl" data-tip="Numeric Y axes: linear spacing, or log (great for skewed counts or port numbers)."><label>Y scale</label><select id="selYS"><option value="linear">linear</option><option value="log">log</option></select></div>
-  <div class="ctl" data-tip="Flip the vertical axis direction (top-down instead of bottom-up)."><label>flip Y</label><input id="chkFlipY" type="checkbox" style="margin-top:4px"></div>
-  <div class="ctl" data-tip="Dot color by category (stable palette - the busiest categories always get distinct colors) or by count on a blue-to-red gradient."><label>Color</label><select id="selC"></select></div>
-  <div class="ctl" data-tip="Dot size. The 'per group' options aggregate over the color/axis category - e.g. with grouping by src, 'distinct ports per group' sizes each dot by how many different services its device talks to. Records and flows are the traffic-quantity proxies - Omada's remote log doesn't include byte or packet totals."><label>Size</label><select id="selS"></select></div>
-  <div class="ctl" data-tip="Show only records whose source IP matches. Supports: single IPs (192.168.0.1), ranges (192.168.0.100-200), shorthand lists (192.168.0.1,2,3,6-10,12), CIDR (10.0.0.0/8), or plain text substring."><label>src contains</label><input id="fSrc" size="10" placeholder="192.0.2.10"></div>
-  <div class="ctl" data-tip="Hide records whose source IP matches. Same syntax as src contains."><label>src not</label><input id="fSrcNot" size="10" placeholder="192.0.2.99"></div>
-  <div class="ctl" data-tip="Show only records whose destination IP matches. Same syntax as src contains."><label>dst contains</label><input id="fDst" size="10" placeholder="198.51.100.20"></div>
-  <div class="ctl" data-tip="Hide records whose destination IP matches. Same syntax as src contains."><label>dst not</label><input id="fDstNot" size="10" placeholder="203.0.113.7"></div>
-  <div class="ctl" data-tip="Show only these dest ports. Comma list and/or ranges, e.g. 443, 53, 1000-2000."><label>ports are</label><input id="fPortIn" size="11" placeholder="443, 1000-2000"></div>
-  <div class="ctl" data-tip="Exclude these dest ports - e.g. enter 443 to see everything OTHER than that port."><label>ports not</label><input id="fPortNot" size="11" placeholder="443"></div>
+  <div class="ctl"><label>view</label><span class="qrange" role="group" aria-label="Dashboard view"><button class="qbtn active" id="viewScatter" onclick="setView('scatter')">scatter</button><button class="qbtn" id="viewMessages" onclick="setView('messages')">messages</button></span></div>
+  <div class="ctl" data-tip="What the horizontal position of each dot means. time = when the record occurred (or first/last seen for tallies)."><label for="selX">X axis</label><select id="selX"></select></div>
+  <div class="ctl" data-tip="What the vertical position of each dot means. Categorical values get one lane each; numeric axes can use the Y scale option."><label for="selY">Y axis</label><select id="selY"></select></div>
+  <div class="ctl" data-tip="Numeric Y axes: linear spacing, or log (great for skewed counts or port numbers)."><label for="selYS">Y scale</label><select id="selYS"><option value="linear">linear</option><option value="log">log</option></select></div>
+  <div class="ctl" data-tip="Flip the vertical axis direction (top-down instead of bottom-up)."><label for="chkFlipY">flip Y</label><input id="chkFlipY" type="checkbox" style="margin-top:4px"></div>
+  <div class="ctl" data-tip="Dot color by category (stable palette - the busiest categories always get distinct colors) or by count on a blue-to-red gradient."><label for="selC">Color</label><select id="selC"></select></div>
+  <div class="ctl" data-tip="Dot size. The 'per group' options aggregate over the color/axis category - e.g. with grouping by src, 'distinct ports per group' sizes each dot by how many different services its device talks to. Records and flows are the traffic-quantity proxies - Omada's remote log doesn't include byte or packet totals."><label for="selS">Size</label><select id="selS"></select></div>
+  <div class="ctl" data-tip="Show only records whose source IP matches. Supports: single IPs (192.168.0.1), ranges (192.168.0.100-200), shorthand lists (192.168.0.1,2,3,6-10,12), CIDR (10.0.0.0/8), or plain text substring."><label for="fSrc">src contains</label><input id="fSrc" size="10" placeholder="192.0.2.10"></div>
+  <div class="ctl" data-tip="Hide records whose source IP matches. Same syntax as src contains."><label for="fSrcNot">src not</label><input id="fSrcNot" size="10" placeholder="192.0.2.99"></div>
+  <div class="ctl" data-tip="Show only records whose destination IP matches. Same syntax as src contains."><label for="fDst">dst contains</label><input id="fDst" size="10" placeholder="198.51.100.20"></div>
+  <div class="ctl" data-tip="Hide records whose destination IP matches. Same syntax as src contains."><label for="fDstNot">dst not</label><input id="fDstNot" size="10" placeholder="203.0.113.7"></div>
+  <div class="ctl" data-tip="Show only these dest ports. Comma list and/or ranges, e.g. 443, 53, 1000-2000."><label for="fPortIn">ports are</label><input id="fPortIn" size="11" placeholder="443, 1000-2000"></div>
+  <div class="ctl" data-tip="Exclude these dest ports - e.g. enter 443 to see everything OTHER than that port."><label for="fPortNot">ports not</label><input id="fPortNot" size="11" placeholder="443"></div>
   <div class="ctl" data-tip="RFC1918 direction classes. Untick any combination - e.g. untick 'out' and 'other' for internal + inbound only. Unchecking all shows nothing."><label>direction</label>
     <span class="dirgrp">
       <label class="dl"><input type="checkbox" id="chkDirInt" checked>int</label>
@@ -88,22 +184,25 @@
       <label class="dl"><input type="checkbox" id="chkDirOth" checked>other</label>
     </span>
   </div>
-  <div class="ctl" data-tip="Show only flow records, only messages (alerts / system events), or both."><label>flow/msg</label><select id="fType"><option value="both">both</option><option value="flow">flow</option><option value="msg">msg</option></select></div>
-  <div class="ctl" data-tip="Data source: long-term tallies (condensed counts), the recent raw-log tail, or both."><label>dataset</label><select id="fDs"><option value="both">tallies + raw</option><option value="tally">tallies</option><option value="raw">raw</option></select></div>
-  <div class="ctl" data-tip="Hide tally entries with fewer than this many occurrences."><label>min count</label><input id="fMin" type="number" value="0" min="0" style="width:64px"></div>
-  <div class="ctl" data-tip="Time window start (local time). Leave empty for everything."><label>from</label><input id="fFrom" type="datetime-local"></div>
-  <div class="ctl" data-tip="Time window end (local time)."><label>to</label><input id="fTo" type="datetime-local"></div>
+  <div class="ctl" data-tip="Show only flow records, only messages (alerts / system events), or both."><label for="fType">flow/msg</label><select id="fType"><option value="both">both</option><option value="flow">flow</option><option value="msg">msg</option></select></div>
+  <div class="ctl" data-tip="Data source: long-term tallies (condensed counts), the recent raw-log tail, or both."><label for="fDs">dataset</label><select id="fDs"><option value="both">tallies + raw</option><option value="tally">tallies</option><option value="raw">raw</option></select></div>
+  <button id="btnEvents" class="togbtn" onclick="openEvents()" data-tip="Browse every line currently retained in the raw log, including full messages and unparsed rows.">events</button>
+  <button id="btnEventIndex" class="togbtn" onclick="openEventIndex()" data-tip="Search the local event index and browse observed DHCP allocations.">DHCP / event index</button>
+  <div class="ctl" data-tip="Hide tally entries with fewer than this many occurrences."><label for="fMin">min count</label><input id="fMin" type="number" value="0" min="0" style="width:64px"></div>
+  <div class="ctl" data-tip="Inclusive time window start (local time). Leave empty for everything."><label for="fFrom">from</label><input id="fFrom" type="datetime-local" step="0.001"></div>
+  <div class="ctl" data-tip="Inclusive time window end (local time), through the displayed minute, second, or millisecond."><label for="fTo">to (inclusive)</label><input id="fTo" type="datetime-local" step="0.001"></div>
+  <span id="fTimeError" role="alert" aria-live="polite" style="color:#ff9c9c;font-size:11px"></span>
   <div class="ctl" data-tip="Quick time windows: last 15/30/60 minutes or 6 hours. Click the active one again to clear.">
     <label>quick range</label>
-    <span class="qrange">
+    <span class="qrange" role="group" aria-label="Quick time range">
       <button class="qbtn" data-mins="15" onclick="quickRange(15)">15m</button>
       <button class="qbtn" data-mins="30" onclick="quickRange(30)">30m</button>
       <button class="qbtn" data-mins="60" onclick="quickRange(60)">60m</button>
       <button class="qbtn" data-mins="360" onclick="quickRange(360)">6h</button>
     </span>
   </div>
-  <div class="ctl" data-tip="Maximum dots drawn at once (busiest kept first when exceeded). Lower it if the page feels slow."><label>point cap</label><input id="fCap" type="number" value="500000" style="width:76px"></div>
-  <div class="ctl" data-tip="Refetch data every 30 s. Colors and zoom stay put; the time window slides forward quietly."><label>auto 30s</label><input id="chkAuto" type="checkbox" checked style="margin-top:4px"></div>
+  <div class="ctl" data-tip="Maximum dots drawn at once (busiest kept first when exceeded). Lower it if the page feels slow."><label for="fCap">point cap</label><input id="fCap" type="number" value="500000" style="width:76px"></div>
+  <div class="ctl" data-tip="Refetch data every 30 s. Colors and zoom stay put; the time window slides forward quietly."><label for="chkAuto">auto 30s</label><input id="chkAuto" type="checkbox" checked style="margin-top:4px"></div>
   <button id="btnStats" class="togbtn" onclick="toggleStats()">stats</button>
   <button id="togLegend" class="togbtn" data-tip="Toggle the color key on/off." onclick="toggleOverlay('legend')">key</button>
   <button id="togDrawer" class="togbtn" data-tip="Toggle the detail panel - when off, clicking a point spotlights but doesn't open the drawer." onclick="toggleOverlay('drawer')">detail</button>
@@ -114,7 +213,9 @@
   <a id="barSupport" href="#">Support</a>
   <div id="status">loading...</div>
 </div>
-<div id="wrap"><canvas id="plot"></canvas><div id="tip"></div><div id="brush"></div><div id="statsPanel"></div><div id="supportRibbon">
+<div id="sourceStatus">Source availability loading...</div>
+<div id="recoveryStatus">Recovery status loading...</div>
+<div id="wrap"><canvas id="plot"></canvas><div id="messageView"><div id="messageTools"><input id="msgSearch" type="search" placeholder="Search message pattern"><select id="msgSeverity" aria-label="Filter message severity"><option value="">all severities</option></select><button class="togbtn" id="msgPrev" type="button">previous</button><span id="messagePageStatus"></span><button class="togbtn" id="msgNext" type="button">next</button></div><div id="messageViewModes" role="group" aria-label="Message visualization"><button class="qbtn active" id="msgModeBubbles" type="button" aria-pressed="true" onclick="setMessagePresentation('bubbles')">bubbles</button><button class="qbtn" id="msgModeRanked" type="button" aria-pressed="false" onclick="setMessagePresentation('ranked')">ranked</button><button class="qbtn" id="msgModeTime" type="button" aria-pressed="false" onclick="setMessagePresentation('time')">time (raw only)</button></div><div id="messageSizeLegend" aria-live="polite"></div><div id="messageActivityLegend" class="messageActivityLegend" aria-label="Activity color legend"></div><p id="messageCoverage"></p><div id="messageBubbles"></div><div id="messageRanked" class="messageRankedList" style="display:none"></div><div id="messageTime" style="display:none"></div></div><div id="messageHoverDetails" role="region" aria-label="Full message details" tabindex="0"></div><div id="tip"></div><div id="brush"></div><div id="statsPanel"></div><div id="supportRibbon">
   <span class="sup-x" onclick="dismissSupport()" title="Dismiss (won't show again)">&#215;</span>
   <b>Found this useful?</b><br>
   This tool is free and always will be.
@@ -126,6 +227,39 @@
   <span class="sup-hint">PayPal &middot; @lucas-ballek &middot; $luball</span>
 </div></div>
 <div id="detail" ondblclick="this.style.display='none'"><button onclick="document.getElementById('detail').style.display='none'">close</button><h3>entry</h3><pre id="detailBody"></pre></div>
+<div id="eventsPanel" role="dialog" aria-label="Retained raw log events">
+  <div id="eventsHead"><h3>Retained raw log</h3>
+    <div id="eventsNote">Browse pages from the current retained file snapshot. The receiver may trim older rows when its size cap is reached.</div>
+    <button class="togbtn" id="btnEventRefresh" onclick="refreshEvents()">refresh latest</button>
+    <button class="togbtn" id="btnEventNewer" onclick="newerEvents()" disabled>newer</button>
+    <button class="togbtn" id="btnEventOlder" onclick="olderEvents()" disabled>older</button>
+    <button class="togbtn" onclick="closeEvents()">close</button>
+  </div>
+  <div id="eventPageStatus">loading retained events...</div>
+  <div id="eventList"></div>
+</div>
+<div id="eventIndexPanel" role="dialog" aria-label="Searchable DHCP and event index">
+  <div id="eventIndexHead"><h3>DHCP associations &amp; all events</h3>
+    <div id="eventIndexTabs"><button class="togbtn active" id="eventIdxAll" type="button" onclick="setEventIndexKind('all')">all events</button><button class="togbtn" id="eventIdxDhcp" type="button" onclick="setEventIndexKind('dhcp')">DHCP associations</button></div>
+    <button class="togbtn" id="eventIdxRefresh" type="button" onclick="refreshEventIndex()">refresh</button>
+    <button class="togbtn" id="eventIdxOlder" type="button" onclick="loadOlderEventIndex()" disabled>older</button>
+    <button class="togbtn" type="button" onclick="closeEventIndex()">close</button>
+  </div>
+  <div id="eventIndexFilters">
+    <div class="ctl"><label for="eventIdxQ">search all text</label><input id="eventIdxQ" type="search" placeholder="message, activity, sender…"></div>
+    <div class="ctl"><label for="eventIdxIp">IP</label><input id="eventIdxIp" type="search" placeholder="192.0.2.10"></div>
+    <div class="ctl"><label for="eventIdxMac">MAC</label><input id="eventIdxMac" type="search" placeholder="aa:bb:cc:dd:ee:ff"></div>
+    <div class="ctl"><label for="eventIdxActivity">activity</label><input id="eventIdxActivity" type="search" placeholder="exact category or label"></div>
+    <div class="ctl"><label for="eventIdxSender">sender</label><input id="eventIdxSender" type="search" placeholder="collector / device"></div>
+    <div class="ctl"><label for="eventIdxSince">from</label><input id="eventIdxSince" type="datetime-local" step="0.001"></div>
+    <div class="ctl"><label for="eventIdxUntil">to (inclusive)</label><input id="eventIdxUntil" type="datetime-local" step="0.001"></div>
+    <span id="eventIdxTimeError" role="alert" aria-live="polite" style="color:#ff9c9c;font-size:11px"></span>
+    <div class="ctl"><label for="eventIdxSort">order</label><select id="eventIdxSort"><option value="received_at_desc">newest first</option><option value="received_at_asc">oldest first</option></select></div>
+    <button class="togbtn" id="eventIdxApply" type="button" onclick="refreshEventIndex()">apply filters</button>
+  </div>
+  <div id="eventIndexStatus" aria-live="polite">Loading event index…<div id="eventIndexNote"></div></div>
+  <div id="eventIndexList"></div>
+</div>
 <div id="ctip"></div>
 <div id="supportMenu">
   <div class="sm-title">Support this tool</div>
@@ -161,11 +295,11 @@
 </div></div>
 <script>
 "use strict";
-var AXES = ["ts","first","last","count","src","dst","dpt","proto","sev","type","ds","dir"];
-var COLORVARS = ["","src","dst","dpt","proto","sev","type","ds","dir","count"];
+var AXES = ["ts","first","last","count","src","dst","spt","dpt","proto","ap","sev","type","ds","dir"];
+var COLORVARS = ["","src","dst","spt","dpt","proto","ap","sev","type","ds","dir","count"];
 var SIZEVARS = ["const","count","occ","agg_rec","agg_flows","agg_dpt","agg_dst","agg_days"];
 var LABEL = {ts:"time",first:"first seen",last:"last seen",count:"count",src:"src",dst:"dst",
-  dpt:"dest port",proto:"proto",sev:"severity",type:"flow/msg",ds:"dataset",
+  spt:"source port (tally sample)",dpt:"dest port",proto:"proto",ap:"AP MAC",sev:"severity",type:"flow/msg",ds:"dataset",
   dir:"direction","":"none",const:"constant",occ:"# occurrences",
   agg_rec:"records per group",agg_flows:"flows per group",agg_dpt:"distinct ports per group",
   agg_dst:"distinct dests per group",agg_days:"active days per group"};
@@ -265,7 +399,8 @@ function buildAllPoints(){
     for (ts in stamps){
       if (e.type === "flow"){
         pts.push({ds:"tally", ts:ts, first:e.first, last:e.last, count:e.count||0,
-          src:e.src, dst:e.dst, proto:e.proto, dpt:(e.dpt === undefined ? null : e.dpt),
+          src:e.src, dst:e.dst, proto:e.proto, spt:(e.spt_sample === undefined ? null : e.spt_sample),
+          dpt:(e.dpt === undefined ? null : e.dpt), ap:(e.ap === undefined ? null : e.ap),
           sev:null, type:"flow", occ:occ.length, dir:(e.dir || "other"),
           label:e.src+" -> "+e.dst+" "+protoName(e.proto)+"/"+((e.dpt == null) ? "-" : e.dpt), ref:e});
       } else {
@@ -279,8 +414,10 @@ function buildAllPoints(){
   for (i = 0; i < data.raw.length; i++){
     var r = data.raw[i];
     pts.push({ds:"raw", ts:r.ts, first:null, last:null, count:1,
-      src:r.src, dst:r.dst, proto:r.proto, dpt:r.dpt,
+      src:r.src, dst:r.dst, proto:r.proto, spt:(r.spt === undefined ? null : r.spt),
+      dpt:r.dpt, ap:(r.ap === undefined ? null : r.ap),
       sev:(r.sev === undefined ? null : r.sev), type:(r.type || "flow"), occ:0,
+      message:(r.message === undefined ? null : r.message),
       dir:(r.dir || "other"), label:r.label, ref:r});
   }
   return pts;
@@ -383,7 +520,42 @@ function portMatch(dpt, list){
   return false;
 }
 
-function applyFilters(){
+function parseLocalDateTime(value, isEnd){
+  if (!value) return null;
+  var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?$/.exec(value);
+  if (!m) return {error:"Enter a valid local date and time (up to milliseconds)."};
+  var year=Number(m[1]), month=Number(m[2]), day=Number(m[3]), hour=Number(m[4]), minute=Number(m[5]);
+  var second=m[6] === undefined ? 0 : Number(m[6]);
+  var fraction=m[7] || "", millisecond=fraction ? Number((fraction+"00").slice(0,3)) : 0;
+  var date=new Date(year,month-1,day,hour,minute,second,millisecond);
+  if (date.getFullYear()!==year || date.getMonth()!==month-1 || date.getDate()!==day ||
+      date.getHours()!==hour || date.getMinutes()!==minute || date.getSeconds()!==second ||
+      date.getMilliseconds()!==millisecond){
+    return {error:"That local time is invalid or does not exist because of a clock change."};
+  }
+  var wallTime=new Date(0);
+  wallTime.setUTCFullYear(year,month-1,day); wallTime.setUTCHours(hour,minute,second,millisecond);
+  var offsets=Object.create(null), matches=Object.create(null);
+  for(var delta=-240;delta<=240;delta+=15){
+    offsets[new Date(date.getTime()+delta*60000).getTimezoneOffset()]=true;
+  }
+  Object.keys(offsets).forEach(function(offset){
+    var candidate=wallTime.getTime()+Number(offset)*60000, local=new Date(candidate);
+    if(local.getFullYear()===year && local.getMonth()===month-1 && local.getDate()===day &&
+       local.getHours()===hour && local.getMinutes()===minute && local.getSeconds()===second &&
+       local.getMilliseconds()===millisecond) matches[candidate]=true;
+  });
+  if(Object.keys(matches).length>1) return {error:"That local time occurs twice because of a clock change; choose an unambiguous time."};
+  var precision = m[6] === undefined ? "minute" : (m[7] ? "fraction" : "second");
+  if (isEnd){
+    if (precision === "minute") date.setSeconds(59,999);
+    else if (precision === "second") date.setMilliseconds(999);
+    else if (fraction.length < 3) date.setMilliseconds(millisecond + (Math.pow(10,3-fraction.length)-1));
+  }
+  return {time:date.getTime()};
+}
+
+function applyFilters(skipCap){
   var fSrc = $("fSrc").value.trim(), fDst = $("fDst").value.trim();
   var fSrcNot = $("fSrcNot").value.trim(), fDstNot = $("fDstNot").value.trim();
   var portIn = parsePortList($("fPortIn").value);
@@ -394,7 +566,14 @@ function applyFilters(){
                inbound: $("chkDirIn").checked, other: $("chkDirOth").checked };
   var fMin = parseInt($("fMin").value, 10) || 0;
   var fType = $("fType").value, fDs = $("fDs").value;
-  var fFrom = $("fFrom").value, fTo = $("fTo").value;
+  var fromControl=$("fFrom"), toControl=$("fTo"), fFrom=fromControl.value, fTo=toControl.value;
+  var fromTime=parseLocalDateTime(fFrom,false), toTime=parseLocalDateTime(fTo,true);
+  var timeError=fromControl.validity && fromControl.validity.badInput ? "From: Enter a complete local date and time, or clear the field." :
+    (toControl.validity && toControl.validity.badInput ? "To: Enter a complete local date and time, or clear the field." :
+    (fromTime && fromTime.error ? "From: "+fromTime.error : (toTime && toTime.error ? "To: "+toTime.error : "")));
+  var dateFilterActive=!!(fFrom || fTo || (fromControl.validity && fromControl.validity.badInput) || (toControl.validity && toControl.validity.badInput));
+  if (!timeError && fromTime && toTime && fromTime.time > toTime.time) timeError="From must be earlier than or equal to the inclusive end time.";
+  var timeErrorEl=$("fTimeError"); if(timeErrorEl) timeErrorEl.textContent=timeError;
   var cap = parseInt($("fCap").value, 10) || 500000;
   var out = [];
   for (var i = 0; i < allPoints.length; i++){
@@ -418,20 +597,524 @@ function applyFilters(){
     if (portIn.length && !portMatch(p.dpt, portIn)) continue;
     if (portNot.length && portMatch(p.dpt, portNot)) continue;
     if (!dirs[p.dir || "other"]) continue;
-    if (p.count < fMin) continue;
+    if (p.ds === "tally" && p.count < fMin) continue;
     if (fType !== "both" && p.type !== fType) continue;
     if (fDs !== "both" && p.ds !== fDs) continue;
-    if (fFrom && p.ts < fFrom) continue;
-    if (fTo && p.ts > fTo) continue;
+    if (dateFilterActive && (timeError || !p.ts || !isFinite(Date.parse(p.ts)))) continue;
+    if (fromTime && Date.parse(p.ts) < fromTime.time) continue;
+    if (toTime && Date.parse(p.ts) > toTime.time) continue;
     if (legendDrill){
       var dv = p[legendDrill.varName];
       if (String(dv === null || dv === undefined ? "-" : dv) !== String(legendDrill.value)) continue;
     }
     out.push(p);
   }
-  capped = out.length > cap;
-  if (capped){ out.sort(function(a,b){ return b.count - a.count; }); out = out.slice(0, cap); }
+  if (!skipCap){
+    capped = out.length > cap;
+    if (capped){ out.sort(function(a,b){ return b.count - a.count; }); out = out.slice(0, cap); }
+  }
   return out;
+}
+
+var activeView = "scatter";
+var MESSAGE_BUBBLE_LIMIT = 250;
+var messagePage = 0;
+var messagePresentation = "bubbles";
+var messageHoverOwner = null;
+var messageHoverSuppressFocus = false;
+var messageSupportRibbonDisplay = null;
+var messageIndexCache = new WeakMap();
+function setMessagePresentation(mode){
+  mode = mode === "ranked" || mode === "time" ? mode : "bubbles";
+  if (mode === "time" && $("msgModeTime").disabled) return;
+  messagePresentation = mode;
+  ["bubbles","ranked","time"].forEach(function(name){
+    var active = name === mode, button = $("msgMode" + name.charAt(0).toUpperCase() + name.slice(1));
+    button.classList.toggle("active", active); button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+  renderMessageBubbles();
+}
+function messageBubbleDiameter(count, maxCount){
+  count = Math.max(0, Number(count) || 0); maxCount = Math.max(0, Number(maxCount) || 0);
+  return maxCount > 0 && count > 0 ? 128 * Math.sqrt(count / maxCount) : 0;
+}
+function messagePackLayout(items, width, height){
+  width = Math.max(1, Number(width) || 900); height = Math.max(1, Number(height) || 520);
+  if (!items.length) return [];
+  var max = Math.max.apply(null, items.map(function(item){return Math.max(0,Number(item.count)||0);})) || 1;
+  var activityTotals=Object.create(null),activityIds=[];
+  items.forEach(function(item){var id=String(item.activityId);if(!Object.prototype.hasOwnProperty.call(activityTotals,id)){activityTotals[id]=0;activityIds.push(id);}activityTotals[id]+=Math.max(0,Number(item.count)||0);});
+  activityIds.sort(function(a,b){return activityTotals[b]-activityTotals[a]||a.localeCompare(b);});
+  var activityRank=Object.create(null),activityCenter=Object.create(null),activityPoints=Object.create(null);
+  var columns=Math.ceil(Math.sqrt(activityIds.length*width/height)),rows=Math.ceil(activityIds.length/columns);
+  activityIds.forEach(function(id,index){activityRank[id]=index;activityCenter[id]={x:(index%columns+.5)*width/columns,y:(Math.floor(index/columns)+.5)*height/rows};activityPoints[id]=[];});
+  var ordered=items.slice().sort(function(a,b){return activityRank[String(a.activityId)]-activityRank[String(b.activityId)]||(Number(b.count)||0)-(Number(a.count)||0)||String(a.key).localeCompare(String(b.key));});
+  var relativeArea=ordered.reduce(function(sum,item){return sum+Math.max(0,Number(item.count)||0)/max;},0),gap=1,pad=2;
+  var baseRadius=Math.sqrt(Math.max(1,(width-2*pad)*(height-2*pad)*.52/(Math.PI*Math.max(relativeArea,.000001))));
+  var placed=[],bounds={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity},golden=Math.PI*(3-Math.sqrt(5));
+  function consider(item,radius,target,x,y,best){
+    if(!isFinite(x)||!isFinite(y))return best;
+    for(var i=0;i<placed.length;i++){var other=placed[i],dx=x-other.x,dy=y-other.y,min=radius+other.r+gap;if(dx*dx+dy*dy<min*min-1e-7)return best;}
+    var left=Math.min(bounds.minX,x-radius),top=Math.min(bounds.minY,y-radius),right=Math.max(bounds.maxX,x+radius),bottom=Math.max(bounds.maxY,y+radius);
+    var boxW=right-left,boxH=bottom-top,area=boxW*boxH;
+    var overflow=Math.max(0,boxW-(width-2*pad))+Math.max(0,boxH-(height-2*pad));
+    var tx=x-target.x,ty=y-target.y,dist=Math.sqrt(tx*tx+ty*ty);
+    var aspect=boxW/Math.max(1,boxH),aspectError=Math.abs(Math.log(Math.max(.0001,aspect/(width/height))));
+    var score=area*(1+aspectError*.45)+overflow*width*height*4+dist*Math.max(1,radius)*.12;
+    if(!best||score<best.score)return {x:x,y:y,r:radius,item:item,score:score,left:left,top:top,right:right,bottom:bottom};
+    return best;
+  }
+  ordered.forEach(function(item,index){
+    var radius=baseRadius*Math.sqrt(Math.max(0,Number(item.count)||0)/max),id=String(item.activityId),neighbors=activityPoints[id],target;
+    if(neighbors.length){target=neighbors.reduce(function(sum,p){sum.x+=p.x;sum.y+=p.y;return sum;},{x:0,y:0});target.x/=neighbors.length;target.y/=neighbors.length;}
+    else target=activityCenter[id];
+    var best=null;
+    if(!placed.length){best={x:width/2,y:height/2,r:radius,item:item,left:width/2-radius,top:height/2-radius,right:width/2+radius,bottom:height/2+radius,score:0};}
+    else {
+      // Tangent candidates fill exposed arcs. Check the largest and most recent circles with fixed angular sampling.
+      var tangentPool=[];
+      for(var top=0;top<Math.min(8,placed.length);top++)tangentPool.push(placed[top]);
+      for(var recent=Math.max(8,placed.length-40);recent<placed.length;recent++)if(tangentPool.indexOf(placed[recent])<0)tangentPool.push(placed[recent]);
+      for(var p=0;p<tangentPool.length;p++)for(var spoke=0;spoke<16;spoke++){
+        var angle=spoke*golden+(index%7)*.17,dist=tangentPool[p].r+radius+gap;
+        best=consider(item,radius,target,tangentPool[p].x+Math.cos(angle)*dist,tangentPool[p].y+Math.sin(angle)*dist,best);
+      }
+      // Intersections of expanded circles test pockets between the largest and most recent circles.
+      var pairPool=[];
+      for(var q=0;q<Math.min(10,placed.length);q++)pairPool.push(placed[q]);
+      for(var tail=Math.max(10,placed.length-18);tail<placed.length;tail++)if(pairPool.indexOf(placed[tail])<0)pairPool.push(placed[tail]);
+      for(var a=0;a<pairPool.length;a++)for(var b=a+1;b<pairPool.length;b++){
+        var pa=pairPool[a],pb=pairPool[b],vx=pb.x-pa.x,vy=pb.y-pa.y,d=Math.sqrt(vx*vx+vy*vy),ra=pa.r+radius+gap,rb=pb.r+radius+gap;
+        if(!d||d>ra+rb||d<Math.abs(ra-rb))continue;
+        var along=(ra*ra-rb*rb+d*d)/(2*d),height2=Math.sqrt(Math.max(0,ra*ra-along*along)),ux=vx/d,uy=vy/d,cx=pa.x+ux*along,cy=pa.y+uy*along;
+        best=consider(item,radius,target,cx-uy*height2,cy+ux*height2,best);
+        if(height2>1e-7)best=consider(item,radius,target,cx+uy*height2,cy-ux*height2,best);
+      }
+      // A compact golden-angle search gives the first member of a new activity group a nearby seed.
+      if(!neighbors.length)for(var spiral=0;spiral<96;spiral++){
+        var sd=2.2*Math.sqrt(spiral),sa=spiral*golden,sx=target.x+Math.cos(sa)*sd,sy=target.y+Math.sin(sa)*sd;
+        best=consider(item,radius,target,sx,sy,best);
+      }
+      if(!best){var edgeX=placed.reduce(function(edge,p){return Math.max(edge,p.x+p.r);},-Infinity);best={x:edgeX+radius+gap,y:height/2,r:radius,item:item,left:edgeX,top:height/2-radius,right:edgeX+radius*2+gap,bottom:height/2+radius,score:Infinity};}
+    }
+    placed.push(best);bounds.minX=Math.min(bounds.minX,best.x-radius);bounds.minY=Math.min(bounds.minY,best.y-radius);bounds.maxX=Math.max(bounds.maxX,best.x+radius);bounds.maxY=Math.max(bounds.maxY,best.y+radius);neighbors.push(best);
+  });
+  var spanX=bounds.maxX-bounds.minX,spanY=bounds.maxY-bounds.minY,scale=Math.min(1,(width-2*pad)/Math.max(1,spanX),(height-2*pad)/Math.max(1,spanY));
+  var offsetX=(width-spanX*scale)/2-bounds.minX*scale,offsetY=(height-spanY*scale)/2-bounds.minY*scale;
+  return placed.map(function(p){return {x:p.x*scale+offsetX,y:p.y*scale+offsetY,r:p.r*scale,item:p.item};});
+}
+function messageActivityColor(id){
+  var hash=2166; for(var i=0;i<String(id).length;i++) hash=(hash*33+String(id).charCodeAt(i))|0;
+  var hue=((hash>>>0)%360); return "hsl("+hue+" 58% 43%)";
+}
+function messageTimeSeries(groups, keys, severity){
+  var events = [], missing = 0;
+  keys.forEach(function(key){
+    var g = groups[key];
+    (g.records || []).forEach(function(record){
+      if (severity && String(record.sev === null || record.sev === undefined ? "unknown" : record.sev) !== severity) return;
+      var stamp = record && (record.ts || record.timestamp), ms = stamp ? Date.parse(stamp) : NaN;
+      if (!isFinite(ms)){ missing++; return; }
+      events.push({ms:ms,activityId:g.activity.id,activityLabel:g.activity.label});
+    });
+  });
+  if (!events.length) return {events:0,missing:missing,step:3600000,period:"hour",buckets:[],activities:Object.create(null)};
+  var min = Infinity,max = -Infinity;
+  events.forEach(function(e){ min = Math.min(min,e.ms); max = Math.max(max,e.ms); });
+  var span = max - min, step = span <= 48*3600000 ? 3600000 : span <= 120*86400000 ? 86400000 : 7*86400000;
+  var period = step === 3600000 ? "hour" : step === 86400000 ? "day" : "week", bucketSet = Object.create(null), activities = Object.create(null);
+  events.forEach(function(e){
+    var bucket = period === "week" ? Math.floor((e.ms + 3*86400000) / step) * step - 3*86400000 : Math.floor(e.ms / step) * step;
+    var key = String(bucket), activity = activities[e.activityId];
+    bucketSet[key] = bucket;
+    if (!activity) activity = activities[e.activityId] = {id:e.activityId,label:e.activityLabel,total:0,buckets:Object.create(null)};
+    activity.total++; activity.buckets[key] = (activity.buckets[key] || 0) + 1;
+  });
+  return {events:events.length,missing:missing,step:step,period:period,buckets:Object.keys(bucketSet).map(Number).sort(function(a,b){return a-b;}),activities:activities};
+}
+function messageTimeLabel(ms, period){
+  var iso = new Date(ms).toISOString();
+  return period === "hour" ? iso.slice(0,16).replace("T"," ") + " UTC" : iso.slice(0,10) + " UTC";
+}
+function messageTimeTick(ms, period){
+  var iso = new Date(ms).toISOString();
+  return period === "hour" ? iso.slice(11,16) : iso.slice(5,10);
+}
+function renderMessageTimeSeries(host, groups, keys, severity, pageInfo, matchingVariantCount){
+  host.textContent = "";
+  var series = messageTimeSeries(groups, keys, severity), note = document.createElement("p");
+  note.className = "messageTimeNote";
+  note.textContent = "Exact timestamps from raw message events on variants " + (pageInfo.start + 1).toLocaleString() + "–" + pageInfo.end.toLocaleString() + " of " + matchingVariantCount.toLocaleString() + " matching variants. Hour/day/week bins use UTC. This covers only the loaded retained log tail (up to 20,000 lines by default), not the lifetime aggregate history.";
+  host.appendChild(note);
+  if (!series.events){
+    var empty = document.createElement("p"); empty.className = "messageTimeNote";
+    empty.textContent = series.missing ? "No parseable event timestamps in this page (" + series.missing.toLocaleString() + " matching raw records lack a valid timestamp)." : "No raw message events with valid timestamps match this page and severity.";
+    host.appendChild(empty); return;
+  }
+  var maxBucket = 1;
+  Object.keys(series.activities).forEach(function(id){
+    Object.keys(series.activities[id].buckets).forEach(function(key){ maxBucket = Math.max(maxBucket, series.activities[id].buckets[key]); });
+  });
+  var axis = document.createElement("div"); axis.className = "messageTimeAxis";
+  series.buckets.forEach(function(bucket, index){
+    var tick = document.createElement("span");
+    tick.textContent = index === 0 || index === series.buckets.length - 1 || index % Math.ceil(series.buckets.length / 8) === 0
+      ? messageTimeTick(bucket,series.period) : "";
+    tick.title = messageTimeLabel(bucket,series.period);
+    axis.appendChild(tick);
+  });
+  host.appendChild(axis);
+  Object.keys(series.activities).sort(function(a,b){return series.activities[b].total-series.activities[a].total;}).forEach(function(id){
+    var activity = series.activities[id], row = document.createElement("div"); row.className = "messageTimeGroup";
+    var label = document.createElement("div"); label.className = "messageTimeActivity";
+    label.textContent = activity.label + " · " + activity.total.toLocaleString() + " raw records"; row.appendChild(label);
+    var bars = document.createElement("div"); bars.className = "messageTimeBars";
+    series.buckets.forEach(function(bucket){
+      var key = String(bucket), count = activity.buckets[key] || 0, cell = document.createElement("div"); cell.className = "messageTimeBucket";
+      cell.setAttribute("role","img"); cell.setAttribute("tabindex","0");
+      cell.setAttribute("aria-label", messageTimeLabel(bucket,series.period) + ": " + count + " records for " + activity.label);
+      var tip = document.createElement("span"); tip.className = "messageTimeTip"; tip.textContent = messageTimeLabel(bucket,series.period) + " · " + count + " records"; cell.appendChild(tip);
+      if (count){ var bar = document.createElement("span"); bar.className = "messageTimeBar"; bar.style.height = Math.max(2, count / maxBucket * 54) + "px"; cell.appendChild(bar); }
+      bars.appendChild(cell);
+    });
+    row.appendChild(bars); host.appendChild(row);
+  });
+}
+function firstMessageIndexMap(records){
+  if (!records || (typeof records !== "object" && typeof records !== "function")) return new Map();
+  var cached = messageIndexCache.get(records);
+  if (cached) return cached;
+  var first = new Map();
+  for (var i = 0; i < records.length; i++) if (!first.has(records[i])) first.set(records[i], i);
+  messageIndexCache.set(records, first);
+  return first;
+}
+function activityForMessage(p, pattern){
+  var a = p.ref && p.ref.activity || {};
+  var id = a.id && String(a.id) !== "unknown" ? String(a.id) : "unknown:" + String(pattern);
+  return {id:id,label:String(a.label || (id.indexOf("unknown:") === 0 ? "Unknown activity" : id)),variables:a.variables || {},sampleOnly:!!a.sample_only,coverage:a.coverage || "unavailable"};
+}
+function addActivityValue(activityValues, activityId, field, value){
+  var activities = activityValues[activityId] || (activityValues[activityId] = Object.create(null));
+  var values = activities[field] || (activities[field] = Object.create(null));
+  values[value] = (values[value] || 0) + 1;
+}
+function buildMessageGroups(filtered, useTally, supplementalRaw){
+  var groups = Object.create(null), activityRawValues = Object.create(null), total = 0;
+  var entryIndexes = firstMessageIndexMap(data.entries), rawIndexes = firstMessageIndexMap(data.raw);
+  for (var i = 0; i < filtered.length; i++){
+    var p = filtered[i];
+    if (p.type !== "msg" || (useTally && p.ds !== "tally") || (!useTally && $("fDs").value === "tally" && p.ds !== "tally")) continue;
+    if (!useTally && $("fDs").value !== "raw" && p.ds !== "raw") continue;
+    var pattern = p.ds === "tally" ? (p.ref.template || "(template unavailable)") : (p.message || p.ref.message || p.ref.label || "(message text unavailable)");
+    var key = String(pattern), activity = activityForMessage(p, key);
+    var variantKey = activity.id + "\u0000" + key;
+    if (!Object.prototype.hasOwnProperty.call(groups, variantKey)) groups[variantKey] = {key:variantKey,pattern:key,activity:activity,count:0,severity:Object.create(null),records:[],seen:Object.create(null),rawValues:Object.create(null),sampleValues:Object.create(null),sampleCandidates:Object.create(null)};
+    var g = groups[variantKey];
+    var recordIndex = (p.ds === "tally" ? entryIndexes : rawIndexes).get(p.ref);
+    var id = (p.ds === "tally" ? "t:" : "r:") + (recordIndex === undefined ? -1 : recordIndex);
+    if (g.seen[id]) continue;
+    g.seen[id] = 1;
+    var n = p.ds === "tally" ? Math.max(0, Number(p.ref.count) || 0) : 1;
+    g.count += n; total += n;
+    var sev = p.ref.sev;
+    var sevKey = (sev === null || sev === undefined) ? "unknown" : String(sev);
+    g.severity[sevKey] = (g.severity[sevKey] || 0) + n;
+    g.records.push(p.ref);
+    if (p.ds === "tally" && activity.sampleOnly){
+      Object.keys(activity.variables).forEach(function(name){
+        var values = Array.isArray(activity.variables[name]) ? activity.variables[name] : [activity.variables[name]];
+        if (!g.sampleValues[name]) g.sampleValues[name] = Object.create(null);
+        values.forEach(function(value){ if (value !== null && value !== undefined && String(value) !== "") g.sampleValues[name][String(value)] = 1; });
+      });
+      var candidateProvenance = p.ref.candidates_provenance || {};
+      if (candidateProvenance.sample_only){
+        (p.ref.candidates || []).forEach(function(candidate){
+          if (!candidate || candidate.value === null || candidate.value === undefined) return;
+          var candidateValue = String(candidate.value), alreadyLabeled = Object.keys(activity.variables).some(function(name){
+            var values = Array.isArray(activity.variables[name]) ? activity.variables[name] : [activity.variables[name]];
+            return values.some(function(value){ return String(value) === candidateValue; });
+          });
+          if (alreadyLabeled) return;
+          var candidateName = candidate.role || (candidate.kind ? "candidate " + candidate.kind : "candidate");
+          if (!g.sampleCandidates[candidateName]) g.sampleCandidates[candidateName] = Object.create(null);
+          g.sampleCandidates[candidateName][candidateValue] = 1;
+        });
+      }
+    }
+  }
+  // Recent raw records enrich activity observed values while tally counts stay authoritative.
+  var seenSupplemental = Object.create(null);
+  (supplementalRaw || []).forEach(function(p){
+    if (!p || p.type !== "msg" || p.ds !== "raw") return;
+    var rawIndex = rawIndexes.get(p.ref), rawId = "r:" + (rawIndex === undefined ? -1 : rawIndex); if (seenSupplemental[rawId]) return; seenSupplemental[rawId] = 1;
+    var message = p.message || p.ref.message || p.ref.label || "(message text unavailable)";
+    var a = activityForMessage(p, message), seenKey = a.id;
+    var variables = (p.ref.activity && p.ref.activity.variables) || {};
+    var recordValues = Object.create(null);
+    function collect(name, value){
+      if (value === null || value === undefined || String(value) === "") return;
+      var v = String(value); (recordValues[name] || (recordValues[name] = Object.create(null)))[v] = 1;
+    }
+    Object.keys(variables).forEach(function(name){
+      var vals = Array.isArray(variables[name]) ? variables[name] : [variables[name]];
+      vals.forEach(function(v){ collect(name, v); });
+    });
+    (p.ref.candidates || []).forEach(function(c){
+      if (!c || c.value === null || c.value === undefined) return;
+      var value = String(c.value), alreadyLabeled = Object.keys(variables).some(function(name){
+        var vals = Array.isArray(variables[name]) ? variables[name] : [variables[name]];
+        return vals.some(function(v){ return String(v) === value; });
+      });
+      if (!alreadyLabeled) collect(c.role || (c.kind ? "candidate " + c.kind : "candidate"), value);
+    });
+    Object.keys(recordValues).forEach(function(field){
+      Object.keys(recordValues[field]).forEach(function(value){ addActivityValue(activityRawValues, seenKey, field, value); });
+    });
+    Object.keys(groups).forEach(function(key){
+      var g = groups[key]; if (g.activity.id !== seenKey) return;
+      Object.keys(recordValues).forEach(function(name){
+        if (!g.rawValues[name]) g.rawValues[name] = Object.create(null);
+        Object.keys(recordValues[name]).forEach(function(value){ g.rawValues[name][value] = 1; });
+      });
+    });
+  });
+  return {groups:groups,total:total,activityRawValues:activityRawValues};
+}
+function filterMessagePatternKeys(keys, groups, query, severity){
+  var q = String(query || "").trim().toLowerCase();
+  return keys.filter(function(key){
+    var g = groups[key];
+    var values = [];
+    Object.keys(g.activity.variables || {}).forEach(function(name){ values = values.concat(Array.isArray(g.activity.variables[name]) ? g.activity.variables[name] : [g.activity.variables[name]]); });
+    Object.keys(g.rawValues || {}).forEach(function(name){ values = values.concat(Object.keys(g.rawValues[name])); });
+    Object.keys(g.sampleCandidates || {}).forEach(function(name){ values = values.concat(Object.keys(g.sampleCandidates[name])); });
+    var searchable = [g.pattern,g.activity.label,g.activity.id].concat(Object.keys(g.activity.variables || {}),values).join(" ").toLowerCase();
+    if (q && searchable.indexOf(q) < 0) return false;
+    if (severity && !Object.prototype.hasOwnProperty.call(g.severity, severity)) return false;
+    return true;
+  });
+}
+function messagePageSlice(keys, page, size){
+  var pageCount = Math.max(1, Math.ceil(keys.length / size));
+  page = Math.max(0, Math.min(page, pageCount - 1));
+  var start = page * size;
+  return {page:page,pageCount:pageCount,start:start,end:Math.min(start + size, keys.length),keys:keys.slice(start, start + size)};
+}
+function messageCountFor(group, severity){
+  return severity ? (group.severity[severity] || 0) : group.count;
+}
+function messageActivitySummary(groups, matchingKeys, pageKeys, severity){
+  var summaries = Object.create(null);
+  matchingKeys.forEach(function(key){
+    var g = groups[key], id = g.activity.id, summary = summaries[id] || (summaries[id] = {total:0,variants:0,pageVariants:0});
+    summary.total += messageCountFor(g,severity); summary.variants++;
+  });
+  (pageKeys || []).forEach(function(key){
+    var id = groups[key].activity.id;
+    if (summaries[id]) summaries[id].pageVariants++;
+  });
+  return summaries;
+}
+function messageRawSupplement(datasetControl, apply){
+  if (datasetControl.value === "tally") return [];
+  var previous = datasetControl.value;
+  datasetControl.value = "raw";
+  try { return apply(true); }
+  finally { datasetControl.value = previous; }
+}
+function messageDetailData(g, shownCount, severity, grouped, useTally, rawRedacted){
+  return {activity:g.activity, pattern_template:g.pattern, displayed_count:shownCount, total_count:g.count, raw_observed_values_for_variant:g.rawValues,
+    activity_observed_in_recent_raw_records:grouped.activityRawValues[g.activity.id] || {},
+    sample_values:g.sampleValues, sample_candidates:g.sampleCandidates, sample_only:!!g.activity.sampleOnly,
+    sample_candidates_provenance:g.records.map(function(record){ return record.candidates_provenance || null; }),
+    selected_severity:severity || null, severity_counts:g.severity,
+    source:useTally ? "condensed aggregate" : "raw retained tail",
+    detail_note:useTally ? "Counts are lifetime aggregate totals. Samples and sample candidates are examples, not complete historical variance. Raw observations are activity-wide values from the recent retained tail; their frequencies count raw records only and are not added to aggregate counts." : (rawRedacted ? "Original message text is hidden for remote clients." : "Raw records include the available parsed message text."),
+    records:g.records};
+}
+function showMessageDetails(g, shownCount, severity, grouped, useTally, rawRedacted){
+  closeMessageHover();
+  var details = messageDetailData(g,shownCount,severity,grouped,useTally,rawRedacted);
+  $("detailBody").textContent = JSON.stringify(details, null, 2);
+  $("detail").querySelector("h3").textContent = useTally ? "message aggregate details" : "raw message details";
+  $("detail").style.display = "block";
+  $("detail").querySelector("button").focus();
+}
+function showMessageHover(item,g,shownCount,severity,grouped,useTally,rawRedacted){
+  var panel=$("messageHoverDetails"), details=messageDetailData(g,shownCount,severity,grouped,useTally,rawRedacted); messageHoverOwner=item;
+  panel.textContent=JSON.stringify(details,null,2); panel.style.display="block";
+  var rect=item.getBoundingClientRect(), pad=12, panelW=Math.min(560,window.innerWidth-24), panelH=Math.min(window.innerHeight*.65,560);
+  var left=pad,top;
+  if(rect.right+10+panelW<=window.innerWidth-pad) left=rect.right+10;
+  else if(rect.left-10-panelW>=pad) left=rect.left-10-panelW;
+  else if(rect.bottom+10+panelH<=window.innerHeight-pad) top=rect.bottom+10;
+  else if(rect.top-10-panelH>=pad) top=rect.top-10-panelH;
+  if(top===undefined) top=Math.max(pad,Math.min(window.innerHeight-panelH-pad,rect.top));
+  left=Math.max(pad,Math.min(window.innerWidth-panelW-pad,left));
+  panel.style.left=left+"px"; panel.style.top=top+"px";
+}
+function closeMessageHover(){var panel=$("messageHoverDetails"); if(panel) panel.style.display="none"; messageHoverOwner=null;}
+function setView(view){
+  closeMessageHover();
+  activeView = view === "messages" ? "messages" : "scatter";
+  var supportRibbon=$("supportRibbon");
+  if(activeView==="messages"){
+    if(messageSupportRibbonDisplay===null)messageSupportRibbonDisplay=supportRibbon.style.display;
+    supportRibbon.style.display="none";
+  } else if(messageSupportRibbonDisplay!==null){supportRibbon.style.display=messageSupportRibbonDisplay;messageSupportRibbonDisplay=null;}
+  $("plot").style.display = activeView === "scatter" ? "block" : "none";
+  $("messageView").style.display = activeView === "messages" ? "block" : "none";
+  $("tip").style.display = "none";
+  $("brush").style.display = "none";
+  $("viewScatter").classList.toggle("active", activeView === "scatter");
+  $("viewMessages").classList.toggle("active", activeView === "messages");
+  if (activeView === "messages") renderMessageBubbles();
+  else fit();
+}
+function renderMessageBubbles(){
+  var host = $("messageBubbles"), rankedHost = $("messageRanked"), timeHost = $("messageTime"), coverage = $("messageCoverage"), sizeLegend = $("messageSizeLegend");
+  closeMessageHover();
+  host.textContent = ""; rankedHost.textContent = ""; timeHost.textContent = "";
+  sizeLegend.textContent = "";
+  $("messageActivityLegend").textContent = "";
+  $("messageActivityLegend").style.display = messagePresentation === "bubbles" ? "flex" : "none";
+  var condensed = data.entries.filter(function(e){ return e && e.type === "msg"; });
+  var useTally = condensed.length > 0 && $("fDs").value !== "raw";
+  var timeAvailable = $("fDs").value === "raw" || condensed.length === 0 && $("fDs").value === "both";
+  $("msgModeTime").disabled = !timeAvailable;
+  if (!timeAvailable && messagePresentation === "time") messagePresentation = "bubbles";
+  $("messageBubbles").style.display = messagePresentation === "bubbles" ? "block" : "none";
+  rankedHost.style.display = messagePresentation === "ranked" ? "flex" : "none";
+  timeHost.style.display = messagePresentation === "time" ? "block" : "none";
+  ["bubbles","ranked","time"].forEach(function(name){
+    var button = $("msgMode" + name.charAt(0).toUpperCase() + name.slice(1)), active = name === messagePresentation;
+    button.classList.toggle("active", active); button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+  var filtered = applyFilters(true), rawSupplement = [];
+  if (useTally){
+    var dsSelect = $("fDs"); rawSupplement = messageRawSupplement(dsSelect, applyFilters);
+    var selectedRawSeverity = $("msgSeverity").value;
+    if (selectedRawSeverity) rawSupplement = rawSupplement.filter(function(p){ return String(p.ref.sev === null || p.ref.sev === undefined ? "unknown" : p.ref.sev) === selectedRawSeverity; });
+  }
+  var grouped = buildMessageGroups(filtered, useTally, rawSupplement);
+  var groups = grouped.groups, total = grouped.total;
+  var rawRedacted = !useTally && filtered.some(function(p){ return p.type === "msg" && p.ds === "raw" && p.ref.label === "(message text hidden for remote clients)"; });
+  var coverageText = useTally
+    ? "Condensed aggregates provide lifetime counts. Recent raw records only add labeled observed values and never add to those counts. Aggregate samples show examples, not complete historical variance. Time filters select aggregate rows by retained first, last, and sampled occurrence timestamps; they do not calculate exact in-range event counts."
+    : (rawRedacted ? "Raw message text is hidden for remote clients. The redacted records are shown as one placeholder group; counts cover the retained raw tail and may overlap condensed history." : (condensed.length ? "Showing raw message records because raw is selected. These are retained-tail counts and may overlap condensed history." : "No condensed message aggregates are available; showing raw retained-tail messages as the fallback. Counts cover only the raw tail."));
+  coverage.textContent = coverageText;
+  var keys = Object.keys(groups).sort(function(a,b){ return groups[b].count - groups[a].count; });
+  var allPatternCount = keys.length, allTotal = total;
+  var sevSelect = $("msgSeverity"), selectedSeverity = sevSelect.value, severities = {};
+  keys.forEach(function(k){ Object.keys(groups[k].severity).forEach(function(s){ severities[s] = 1; }); });
+  sevSelect.textContent = "";
+  var allOption = document.createElement("option"); allOption.value = ""; allOption.textContent = "all severities"; sevSelect.appendChild(allOption);
+  Object.keys(severities).sort(function(a,b){
+    if (a === "unknown") return 1; if (b === "unknown") return -1; return (+a) - (+b);
+  }).forEach(function(s){
+    var option = document.createElement("option"); option.value = s;
+    option.textContent = s === "unknown" ? "unknown severity" : sevName(+s) + " (" + s + ")";
+    sevSelect.appendChild(option);
+  });
+  sevSelect.value = severities[selectedSeverity] ? selectedSeverity : "";
+  keys = filterMessagePatternKeys(keys, groups, $("msgSearch").value, sevSelect.value);
+  keys.sort(function(a,b){ return messageCountFor(groups[b], sevSelect.value) - messageCountFor(groups[a], sevSelect.value); });
+  var matchingTotal = keys.reduce(function(sum,k){ return sum + messageCountFor(groups[k], sevSelect.value); }, 0);
+  coverage.textContent += " Overall: " + allTotal.toLocaleString() + " records across " + allPatternCount.toLocaleString() + " message variants. Current search/severity matches " + keys.length.toLocaleString() + " variants (" + matchingTotal.toLocaleString() + " records). Showing page " + (messagePage+1).toLocaleString() + " of " + Math.max(1,Math.ceil(keys.length/MESSAGE_BUBBLE_LIMIT)).toLocaleString() + " (up to " + MESSAGE_BUBBLE_LIMIT + " variants per page); use next/previous to reach every match.";
+  var matchingKeys = keys.slice(), pageInfo = messagePageSlice(keys, messagePage, MESSAGE_BUBBLE_LIMIT);
+  messagePage = pageInfo.page;
+  $("msgPrev").disabled = pageInfo.page === 0;
+  $("msgNext").disabled = pageInfo.page >= pageInfo.pageCount - 1;
+  $("messagePageStatus").textContent = keys.length ? (pageInfo.start + 1).toLocaleString() + "–" + pageInfo.end.toLocaleString() + " of " + keys.length.toLocaleString() : "0 patterns";
+  keys = pageInfo.keys;
+  if (!keys.length){
+    var empty = document.createElement("p"); empty.textContent = data.entries.length || data.raw.length ? "No messages match the current filters." : "No message data is available."; empty.style.color = "#8a93a3";
+    (messagePresentation === "ranked" ? rankedHost : host).appendChild(empty);
+    if (messagePresentation === "time"){
+      var emptyTime = document.createElement("p"); emptyTime.className = "messageTimeNote";
+      emptyTime.textContent = "No raw message events match the current filters and severity."; timeHost.appendChild(emptyTime);
+    }
+    updStatus(); return;
+  }
+  var max = messageCountFor(groups[keys[0]], sevSelect.value), clusterNodes = Object.create(null);
+  var activitySummaries = messageActivitySummary(groups,matchingKeys,keys,sevSelect.value);
+  if (messagePresentation === "bubbles"){
+    sizeLegend.textContent = "Circle area is proportional to " + (sevSelect.value ? "records at selected severity" : "all matching records") + "; largest circle on this page = " + max.toLocaleString() + " records. Colors group activity types. Positions show grouping only, with no time or causal axis. Hover or focus for full details; click to pin details.";
+  } else if (messagePresentation === "ranked"){
+    sizeLegend.textContent = "Horizontal bars compare " + (sevSelect.value ? "records at the selected severity" : "all matching records") + " within this page. Rows remain grouped by activity; click a row for record details.";
+  } else {
+    sizeLegend.textContent = "Exact retained raw-event timestamps only · up to 20,000 raw log lines by default (configurable with --raw-tail). Historical tallies do not contain complete per-event times.";
+    renderMessageTimeSeries(timeHost, groups, keys, sevSelect.value, pageInfo, matchingKeys.length);
+    updStatus(); return;
+  }
+  if (messagePresentation === "ranked"){
+    var rankedActivities = Object.create(null), rankedActivityOrder = [];
+    keys.forEach(function(key){
+      var g = groups[key], activityId = g.activity.id;
+      if (!rankedActivities[activityId]) rankedActivities[activityId] = {activity:g.activity,keys:[],total:0};
+      rankedActivities[activityId].keys.push(key); rankedActivities[activityId].total += messageCountFor(g,sevSelect.value);
+    });
+    rankedActivityOrder = Object.keys(rankedActivities).sort(function(a,b){return rankedActivities[b].total-rankedActivities[a].total;});
+    rankedActivityOrder.forEach(function(activityId){
+      var block = rankedActivities[activityId], summary = activitySummaries[activityId], section = document.createElement("section"); section.className = "activityCluster";
+      var head = document.createElement("div"); head.className = "activityHead";
+      var name = document.createElement("span"); name.className = "activityName"; name.textContent = block.activity.label; head.appendChild(name);
+      var id = document.createElement("span"); id.className = "activityId"; id.textContent = activityId; head.appendChild(id);
+      var totalLabel = document.createElement("span"); totalLabel.className = "activityCount"; totalLabel.textContent = summary.total.toLocaleString() + " matching records across " + summary.variants + " variants (" + summary.pageVariants + " on this page)"; head.appendChild(totalLabel);
+      section.appendChild(head);
+      var rows = document.createElement("div"); rows.className = "messageRankedList"; section.appendChild(rows);
+      block.keys.forEach(function(key){
+        var g = groups[key], count = messageCountFor(g,sevSelect.value), row = document.createElement("button");
+        row.type = "button"; row.className = "messageRankedRow";
+        row.setAttribute("aria-label", block.activity.label + ", " + count.toLocaleString() + " records, " + g.pattern);
+        var label = document.createElement("span"); label.className = "rankedActivity"; label.textContent = g.activity.label; row.appendChild(label);
+        var value = document.createElement("span"); value.className = "rankedValue"; value.textContent = count.toLocaleString(); row.appendChild(value);
+        var track = document.createElement("span"); track.className = "rankedBarTrack"; track.setAttribute("aria-hidden","true");
+        var bar = document.createElement("span"); bar.className = "rankedBar"; bar.style.width = Math.max(0, count / max * 100) + "%"; track.appendChild(bar); row.appendChild(track);
+        var pattern = document.createElement("span"); pattern.className = "rankedPattern"; pattern.textContent = g.pattern; row.appendChild(pattern);
+        row.addEventListener("click", function(){showMessageDetails(g,count,sevSelect.value,grouped,useTally,rawRedacted);});
+        rows.appendChild(row);
+      });
+      rankedHost.appendChild(section);
+    });
+    updStatus(); return;
+  }
+  var activityLegend = $("messageActivityLegend"); activityLegend.textContent = "";
+  var hostWidth = Math.max(1,host.clientWidth-16), hostHeight = Math.max(300,Math.min(560,window.innerHeight-300));
+  host.style.height = hostHeight + "px";
+  var legendGroups=Object.create(null);
+  matchingKeys.forEach(function(key){var g=groups[key],id=g.activity.id.indexOf("unknown:")===0?"unknown":g.activity.id,label=id==="unknown"?"Unknown activity":g.activity.label,slot=legendGroups[id]||(legendGroups[id]={label:label,total:0,variants:0});slot.total+=messageCountFor(g,sevSelect.value);slot.variants++;});
+  var legendOrder=Object.keys(legendGroups).sort(function(a,b){return legendGroups[b].total-legendGroups[a].total || a.localeCompare(b);}), visibleActivityIds=legendOrder.slice(0,10), visibleActivitySet=Object.create(null);
+  visibleActivityIds.forEach(function(id){visibleActivitySet[id]=1;});
+  var packItems = keys.map(function(key){var g=groups[key],id=g.activity.id.indexOf("unknown:")===0?"unknown":g.activity.id;return {key:key,count:messageCountFor(g,sevSelect.value),activityId:visibleActivitySet[id]?id:"other",activityLabel:g.activity.label};});
+  var layout = messagePackLayout(packItems,hostWidth,hostHeight), legendActivities=Object.create(null);
+  visibleActivityIds.forEach(function(id){var slot=legendGroups[id],label=id==="unknown"?"Unknown activity":slot.label;legendActivities[id]={label:label,color:messageActivityColor(id),total:slot.total,variants:slot.variants};});
+  if(legendOrder.length>visibleActivityIds.length){var other=legendOrder.slice(visibleActivityIds.length).reduce(function(out,id){out.total+=legendGroups[id].total;out.variants+=legendGroups[id].variants;return out;},{total:0,variants:0});legendActivities.other={label:"Other activities",color:messageActivityColor("other"),total:other.total,variants:other.variants};}
+  layout.forEach(function(point){
+    var key=point.item.key,g=groups[key],count=point.item.count, activityId=point.item.activityId, color=messageActivityColor(activityId);
+    var item=document.createElement("button"); item.type="button"; item.className="messagePackCircle";
+    item.style.width=(point.r*2)+"px"; item.style.height=(point.r*2)+"px"; item.style.left=(point.x-point.r+8)+"px"; item.style.top=(point.y-point.r)+"px"; item.style.background=color;
+    item.setAttribute("aria-label",g.activity.label+", "+count.toLocaleString()+" records, "+g.pattern+". Focus for full details; activate to open details.");
+    if(point.r>=12){var text=document.createElement("span");text.textContent=count.toLocaleString();item.appendChild(text);}
+    item.addEventListener("mouseenter",function(){showMessageHover(item,g,count,sevSelect.value,grouped,useTally,rawRedacted);});
+    item.addEventListener("focus",function(){if(!messageHoverSuppressFocus)showMessageHover(item,g,count,sevSelect.value,grouped,useTally,rawRedacted);});
+    item.addEventListener("keydown",function(ev){if(ev.key==="ArrowDown"&&$("messageHoverDetails").style.display==="block"){ev.preventDefault();$("messageHoverDetails").focus();}});
+    item.addEventListener("mouseleave",function(){setTimeout(function(){var panel=$("messageHoverDetails");if(messageHoverOwner===item&&!panel.matches(":hover")&&!item.matches(":focus"))closeMessageHover();},350);});
+    item.addEventListener("blur",function(){setTimeout(function(){var panel=$("messageHoverDetails");if(messageHoverOwner===item&&!panel.matches(":hover")&&!panel.contains(document.activeElement))closeMessageHover();},350);});
+    item.addEventListener("click",function(){showMessageDetails(g,count,sevSelect.value,grouped,useTally,rawRedacted);});
+    host.appendChild(item);
+  });
+  Object.keys(legendActivities).sort(function(a,b){return legendActivities[b].total-legendActivities[a].total;}).forEach(function(id){
+    var entry=document.createElement("span"),swatch=document.createElement("span"),label=document.createElement("span"),a=legendActivities[id];
+    entry.className="messageLegendItem";swatch.className="messageLegendSwatch";swatch.style.background=a.color;label.textContent=a.label+" · "+a.total.toLocaleString()+" · "+a.variants+" variants";entry.appendChild(swatch);entry.appendChild(label);activityLegend.appendChild(entry);
+  });
+  var keyBox = document.createElement("span"); keyBox.className = "messageSizeKey";
+  [{count:Math.max(1,Math.floor(max/4)),label:Math.max(1,Math.floor(max/4)).toLocaleString() + " records"},{count:max,label:max.toLocaleString() + " records"}].forEach(function(sample){
+    var entry=document.createElement("span");entry.className="messageSizeSample";var dot=document.createElement("span");dot.className="messageSizeDot";var size=messageBubbleDiameter(sample.count,max)*.22;dot.style.width=size+"px";dot.style.height=size+"px";var label=document.createElement("span");label.textContent=sample.label;entry.appendChild(dot);entry.appendChild(label);keyBox.appendChild(entry);
+  });
+  sizeLegend.appendChild(keyBox);
+  updStatus();
 }
 
 function computeRanges(){
@@ -448,7 +1131,7 @@ function computeRanges(){
 }
 
 function isCatVar(v){
-  return v === "src" || v === "dst" || v === "dpt" || v === "proto" ||
+  return v === "src" || v === "dst" || v === "dpt" || v === "proto" || v === "ap" ||
          v === "sev" || v === "type" || v === "ds" || v === "dir";
 }
 function sizeGroupVar(){
@@ -506,7 +1189,7 @@ function uniqVals(v, pts){
   return out;
 }
 function sortVals(v, u){
-  if (v === "dpt" || v === "proto" || v === "sev"){
+  if (v === "spt" || v === "dpt" || v === "proto" || v === "sev"){
     u.sort(function(a,b){ return a - b; });
   } else if (v === "src" || v === "dst"){
     u.sort(function(a,b){
@@ -1023,9 +1706,53 @@ function updStatus(){
     " (same flow " + relatedStats.flow + ", pair " + relatedStats.pair +
     ", service " + relatedStats.svc + ")") : "";
   var drill = legendDrill ? (" | key: " + legendDrill.value) : "";
+  var msgPoints = 0, flowPoints = 0;
+  for (var i = 0; i < drawn.length; i++){
+    if (drawn[i].p.type === "msg") msgPoints++;
+    else if (drawn[i].p.type === "flow") flowPoints++;
+  }
   $("status").textContent = drawn.length + " pts" + (capped ? " (capped)" : "") +
+    " | flows " + flowPoints + ", messages " + msgPoints +
     " | tallies " + data.entries.length + " entries, raw " + data.raw.length + " recs" +
     ((zoomX || zoomY) ? " | zoomed (dbl-click to reset)" : "") + drill + rel;
+}
+
+function updateSourceStatus(){
+  var el = $("sourceStatus"), sources = data.sources || {};
+  function describe(name, key, amount, noun){
+    var s = sources[key];
+    if (!s) return name + ": status unavailable";
+    if (!s.available) return name + ": unavailable (" + (s.error || "read failed") + ")";
+    return name + ": available, " + (s[amount] || 0) + " " + noun;
+  }
+  var text = describe("Tallies", "condensed", "entries", "entries") + "  ·  " +
+             describe("Raw log", "raw", "records", "parsed records");
+  el.textContent = text;
+  el.title = text;
+  el.className = (!sources.condensed || !sources.condensed.available ||
+                  !sources.raw || !sources.raw.available) ? "error" : "";
+}
+
+function updateRecoveryStatus(){
+  var el = $("recoveryStatus"), r = data.recovery || {state:"unknown", reason:"status_not_provided"};
+  var knownReasons = {
+    checkpoint_missing:"restart checkpoint missing",
+    legacy_marker_ambiguous:"older checkpoint could not be reconciled",
+    recovery_error:"catch-up failed"
+  };
+  if (r.state === "recovery_failed"){
+    var reason = knownReasons[r.reason] || "catch-up failed (unrecognized reason)";
+    el.textContent = "Recovery failed: " + reason + (r.updated_at ? " · reported " + r.updated_at : "");
+    el.className = "failed";
+    el.title = el.textContent;
+  } else {
+    var message = r.reason === "status_file_missing"
+      ? "Recovery status unknown: no diagnostic record has been written"
+      : "Recovery status unknown: " + (r.reason || "diagnostic unavailable");
+    el.textContent = message;
+    el.title = r.error ? message + " · " + r.error : message;
+    el.className = r.reason === "status_file_missing" ? "unknown" : "unknown error";
+  }
 }
 
 function relationOf(p){
@@ -1145,6 +1872,9 @@ function resetFilters(){
   $("fFrom").value = "";
   $("fTo").value = "";
   $("fCap").value = "500000";
+  $("msgSearch").value = "";
+  $("msgSeverity").value = "";
+  messagePage = 0;
   /* encodings too: this is "restore the default view" in full */
   $("selX").value = "ts";
   $("selY").value = "dpt";
@@ -1156,12 +1886,269 @@ function resetFilters(){
   legendDrill = null;
   zoomX = zoomY = null;
   clearFitCaches();
+  setView("scatter");
   redrawFromPoints();
 }
 function toggleHelp(){
   var el = $("helpPanel");
   el.style.display = (el.style.display === "flex") ? "none" : "flex";
 }
+var eventSnapshot = null, eventBefore = null, eventNextBefore = null;
+var eventHistory = [], eventLoading = false;
+function eventBytes(n){
+  return n >= 1048576 ? (n / 1048576).toFixed(1) + " MiB" : (n / 1024).toFixed(1) + " KiB";
+}
+function openEvents(){
+  $("eventsPanel").style.display = "flex";
+  refreshEvents();
+}
+function closeEvents(){ $("eventsPanel").style.display = "none"; }
+function setEventBusy(busy){
+  eventLoading = busy;
+  $("btnEventRefresh").disabled = busy;
+  $("btnEventNewer").disabled = busy || eventHistory.length === 0;
+  $("btnEventOlder").disabled = busy || eventNextBefore === null || eventNextBefore === undefined;
+}
+function renderEventRows(rows){
+  var list = $("eventList");
+  list.textContent = "";
+  for (var i = 0; i < rows.length; i++){
+    var ev = rows[i], row = document.createElement("div");
+    row.className = "eventRow";
+    var meta = document.createElement("div"); meta.className = "eventMeta";
+    var kind = document.createElement("span"); kind.className = "eventType";
+    kind.textContent = ev.type || "unparsed";
+    var time = document.createElement("span"); time.textContent = ev.timestamp || "time unavailable";
+    var sender = document.createElement("span"); sender.textContent = "sender " + (ev.sender || "unknown");
+    meta.appendChild(kind); meta.appendChild(time); meta.appendChild(sender); row.appendChild(meta);
+    var preview = document.createElement("div"); preview.className = "eventPreview";
+    preview.textContent = ev.parsed ? (ev.parsed.label || ev.text) : (ev.text || "empty retained line");
+    row.appendChild(preview);
+    var details = document.createElement("details");
+    var summary = document.createElement("summary"); summary.textContent = "full retained line and parsed fields";
+    details.appendChild(summary);
+    var raw = document.createElement("pre"); raw.className = "eventRaw"; raw.textContent = ev.text;
+    details.appendChild(raw);
+    if (ev.parsed){
+      var parsed = document.createElement("pre"); parsed.className = "eventParsed";
+      parsed.textContent = JSON.stringify(ev.parsed, null, 2);
+      details.appendChild(parsed);
+    } else {
+      var note = document.createElement("div"); note.id = "eventError";
+      note.textContent = "This retained line did not match the structured parser; the complete line is shown above.";
+      details.appendChild(note);
+    }
+    row.appendChild(details); list.appendChild(row);
+  }
+}
+function loadEvents(before, snapshot){
+  if (eventLoading) return;
+  setEventBusy(true);
+  $("eventPageStatus").textContent = "Loading one bounded page from the retained log...";
+  var q = "?limit=100";
+  if (before !== null && before !== undefined) q += "&before=" + encodeURIComponent(before);
+  if (snapshot) q += "&snapshot=" + encodeURIComponent(snapshot);
+  fetch("/api/events" + q).then(function(r){
+    return r.json().catch(function(){ return {}; }).then(function(j){ return {ok:r.ok,status:r.status,body:j}; });
+  }).then(function(result){
+    var j = result.body;
+    if (!result.ok){
+      $("eventPageStatus").textContent = (result.status === 409 ? "Log changed: " : "Cannot read events: ") +
+        (j.error || "request failed") + (j.line_bytes ? " (" + j.line_bytes + " bytes; page limit " + j.max_line_bytes + ")" : "");
+      $("eventList").textContent = "";
+      eventHistory = []; eventBefore = null; eventSnapshot = null;
+      eventNextBefore = null;
+      eventSnapshot = null;
+      return;
+    }
+    eventSnapshot = j.snapshot;
+    eventBefore = j.before;
+    eventNextBefore = j.has_older ? j.next_before : null;
+    renderEventRows(j.events || []);
+    var retained = eventBytes(j.retained_bytes || 0);
+    $("eventPageStatus").textContent = "Page " + (eventHistory.length + 1) + " · " +
+      (j.events || []).length + " retained lines · " + (j.unparsed || 0) +
+      " unparsed lines shown in full · retained snapshot " + retained +
+      ". New rows after refresh are excluded; older rows may have been trimmed by receiver retention.";
+  }).catch(function(e){
+    $("eventPageStatus").textContent = "Cannot read retained events: " + e;
+    eventHistory = []; eventBefore = null; eventSnapshot = null;
+    eventNextBefore = null;
+  }).then(function(){ setEventBusy(false); });
+}
+function refreshEvents(){
+  eventSnapshot = null; eventBefore = null; eventNextBefore = null; eventHistory = [];
+  loadEvents(null, null);
+}
+function olderEvents(){
+  if (eventLoading || eventNextBefore === null) return;
+  eventHistory.push(eventBefore);
+  loadEvents(eventNextBefore, eventSnapshot);
+}
+function newerEvents(){
+  if (eventLoading || !eventHistory.length) return;
+  loadEvents(eventHistory.pop(), eventSnapshot);
+}
+// This searchable index is intentionally separate from the retained raw-log
+// browser above: the latter remains available even while indexing/backfill is
+// unavailable or incomplete.
+var eventIndexKind = "all", eventIndexCursor = null, eventIndexLoading = false;
+function openEventIndex(){
+  $("eventIndexPanel").style.display = "flex";
+  refreshEventIndex();
+}
+function closeEventIndex(){ $("eventIndexPanel").style.display = "none"; }
+function setEventIndexKind(kind){
+  eventIndexKind = kind === "dhcp" ? "dhcp" : "all";
+  $("eventIdxAll").classList.toggle("active", eventIndexKind === "all");
+  $("eventIdxDhcp").classList.toggle("active", eventIndexKind === "dhcp");
+  refreshEventIndex();
+}
+function eventIndexFilterQuery(){
+  var p = new URLSearchParams();
+  p.set("type", eventIndexKind);
+  p.set("limit", "100");
+  var sinceControl=$("eventIdxSince"), untilControl=$("eventIdxUntil");
+  var since=localDateTimeIso(sinceControl.value,false), until=localDateTimeIso(untilControl.value,true);
+  var timeError=sinceControl.validity && sinceControl.validity.badInput ? "From: Enter a complete local date and time, or clear the field." :
+    (untilControl.validity && untilControl.validity.badInput ? "To: Enter a complete local date and time, or clear the field." :
+    (since && since.error ? "From: "+since.error : (until && until.error ? "To: "+until.error : "")));
+  if (!timeError && since && until && since.time > until.time) timeError="From must be earlier than or equal to the inclusive end time.";
+  var errorEl=$("eventIdxTimeError"); if(errorEl) errorEl.textContent=timeError;
+  if(timeError) return null;
+  var values = {q:$("eventIdxQ").value,ip:$("eventIdxIp").value,mac:$("eventIdxMac").value,
+    activity:$("eventIdxActivity").value,sender:$("eventIdxSender").value,
+    since:since && since.value,until:until && until.value,sort:$("eventIdxSort").value};
+  Object.keys(values).forEach(function(k){ if (String(values[k] || "").trim()) p.set(k, String(values[k]).trim()); });
+  return p;
+}
+function localDateTimeIso(value,isEnd){
+  var parsed=parseLocalDateTime(value,isEnd);
+  if(!parsed || parsed.error) return parsed;
+  var iso=new Date(parsed.time).toISOString();
+  // The index stores microseconds; extend the final included millisecond to its last microsecond.
+  if(isEnd) iso=iso.replace(/Z$/, "999Z");
+  return {time:parsed.time,value:iso};
+}
+function eventIndexTime(ev){ return ev.timestamp || ev.received_at || "time unavailable"; }
+function eventIndexActivity(ev){
+  var a = ev.activity;
+  return typeof a === "string" ? a : a && (a.label || a.id) || "unknown activity";
+}
+function eventIndexRaw(ev){
+  var r = ev.raw !== undefined ? ev.raw : ev.source_event;
+  if (typeof r === "string") return r;
+  if (r === undefined || r === null) return "Original event payload unavailable in index record.";
+  try { return JSON.stringify(r, null, 2); } catch (_) { return String(r); }
+}
+function eventIndexBytes(n){
+  n = Number(n) || 0;
+  return n >= 1048576 ? (n / 1048576).toFixed(1) + " MiB" : (n / 1024).toFixed(1) + " KiB";
+}
+function eventIndexStatusText(status, count){
+  status = status || {};
+  var state = String(status.state || "unknown").toLowerCase();
+  var messages = {
+    unavailable:"Event index is unavailable. This does not mean there are no events.",
+    busy:"Event index is busy. No empty-result assumption should be made; try again shortly.",
+    backfilling:"Event index is backfilling. Results may be incomplete while older retained records are processed.",
+    ready:"Event index is ready.",
+    degraded:"Event index is degraded. Some results may be unavailable."
+  };
+  var text = messages[state] || "Event index status is unknown; results may be incomplete.";
+  if (state === "ready" || state === "degraded") text += " " + count + " matching records on this page.";
+  var coverage = status.coverage || status.retention || {};
+  var oldest = status.oldest_retained_at || coverage.oldest_retained_at || coverage.oldest_at;
+  var backfill = status.backfill || {};
+  if (state === "ready" || state === "degraded" || state === "backfilling"){
+    if (oldest) text += " Historical coverage begins at the oldest retained backfill record (" + oldest + ").";
+    else text += " Historical coverage begins at the oldest source record retained for backfill; earlier records may no longer be available.";
+  }
+  if (backfill && typeof backfill === "object" && backfill.state) text += " Backfill: " + backfill.state + (backfill.completed_at ? " through " + backfill.completed_at : "") + ".";
+  if (status.legacy_state) text += " Legacy backfill: " + status.legacy_state +
+    (status.legacy_imported_bytes !== undefined || status.legacy_total_bytes !== undefined ? " (" + eventIndexBytes(status.legacy_imported_bytes) + " of " + eventIndexBytes(status.legacy_total_bytes) + ")." : ".");
+  if (status.cutover_at) text += " Index cutover: " + status.cutover_at + ".";
+  var logicalTarget = status.retention_target_bytes !== undefined ? status.retention_target_bytes : coverage.retention_target_bytes;
+  if (logicalTarget !== undefined && Number(logicalTarget) > 0) text += " Configured logical event-store retention target: " + eventIndexBytes(logicalTarget) + "; this is not a hard disk cap, because SQLite WAL files and backfill snapshots can use additional disk space.";
+  else text += " Configured logical event-store retention target is unavailable; this does not indicate a physical disk limit.";
+  var evicted = status.evicted_count !== undefined ? status.evicted_count : coverage.evicted_count;
+  if (evicted !== undefined && Number(evicted) > 0) text += " Retention has evicted " + evicted + " older records.";
+  if (status.live_missed_count !== undefined && Number(status.live_missed_count) > 0) text += " " + status.live_missed_count + " live records were missed while writing.";
+  if (status.error || status.write_error) text += " Status detail: " + (status.error || status.write_error);
+  return text;
+}
+function renderEventIndexRows(rows){
+  var list = $("eventIndexList");
+  list.textContent = "";
+  rows.forEach(function(ev){
+    var row = document.createElement("article"); row.className = "indexedEvent";
+    var meta = document.createElement("div"); meta.className = "indexedEventMeta";
+    var title = document.createElement("span"); title.className = "indexedEventTitle";
+    title.textContent = eventIndexActivity(ev); meta.appendChild(title);
+    [["time",eventIndexTime(ev)],["sender",ev.sender || ev.source || "unknown"],
+      ["origin",ev.origin || "unknown"],["parse",ev.parse_status || "unknown"]].forEach(function(pair){
+      var s = document.createElement("span"); s.textContent = pair[0] + " " + pair[1]; meta.appendChild(s);
+    });
+    row.appendChild(meta);
+    var fields = document.createElement("div"); fields.className = "indexedEventFields";
+    fields.textContent = "IP " + (ev.allocated_ip || ev.ip || "unknown") + " · MAC " + (ev.client_mac || ev.mac || "unknown");
+    row.appendChild(fields);
+    var summaryText = ev.preview || ev.label || ev.message || ev.description || "";
+    if (summaryText){ var preview = document.createElement("div"); preview.className = "eventPreview"; preview.textContent = String(summaryText); row.appendChild(preview); }
+    var details = document.createElement("details");
+    var summary = document.createElement("summary"); summary.textContent = "original event and extracted fields"; details.appendChild(summary);
+    var raw = document.createElement("pre"); raw.textContent = eventIndexRaw(ev); details.appendChild(raw);
+    if (ev.source_event_base64){
+      var encoded = document.createElement("pre"); encoded.textContent = "Original payload bytes, base64:\n" + String(ev.source_event_base64); details.appendChild(encoded);
+    }
+    var extracted = document.createElement("pre");
+    extracted.textContent = JSON.stringify({id:ev.id,received_at:ev.received_at || ev.timestamp,source:ev.source || ev.sender,
+      activity:ev.activity,ip:ev.ip || ev.allocated_ip,mac:ev.mac || ev.client_mac,origin:ev.origin,
+      extraction_version:ev.extraction_version,metadata:ev.metadata,parse_status:ev.parse_status}, null, 2);
+    details.appendChild(extracted); row.appendChild(details); list.appendChild(row);
+  });
+}
+function setEventIndexBusy(busy){
+  eventIndexLoading = busy;
+  ["eventIdxRefresh","eventIdxOlder","eventIdxApply"].forEach(function(id){ $(id).disabled = busy || (id === "eventIdxOlder" && !eventIndexCursor); });
+}
+function loadEventIndex(cursor){
+  if (eventIndexLoading) return;
+  setEventIndexBusy(true);
+  $("eventIndexStatus").firstChild.textContent = "Loading a bounded page from the local event index…";
+  $("eventIndexNote").textContent = "";
+  var p = eventIndexFilterQuery();
+  if (!p){ $("eventIndexStatus").firstChild.textContent="Correct the local time filter to load events."; setEventIndexBusy(false); return; }
+  if (cursor) p.set("cursor", cursor);
+  fetch("/api/recorded-events?" + p.toString()).then(function(r){
+    return r.json().catch(function(){ return {}; }).then(function(j){ return {ok:r.ok,status:r.status,body:j}; });
+  }).then(function(result){
+    var j = result.body, status = j.status || {};
+    if (!result.ok){
+      eventIndexCursor = null; $("eventIdxOlder").disabled = true;
+      $("eventIndexStatus").firstChild.textContent = "Cannot read event index (" + result.status + "): " + (j.error || "request failed") + ". This is not an empty result.";
+      $("eventIndexNote").textContent = eventIndexStatusText(status, 0);
+      $("eventIndexList").textContent = ""; return;
+    }
+    var rows = j.events || [];
+    eventIndexCursor = j.next_cursor || null;
+    $("eventIdxOlder").disabled = !eventIndexCursor;
+    renderEventIndexRows(rows);
+    $("eventIndexStatus").firstChild.textContent = eventIndexStatusText(status, rows.length);
+    var interp = j.interpretation;
+    if (eventIndexKind === "dhcp") $("eventIndexNote").textContent = (typeof interp === "string" ? interp :
+      "DHCP records are observed allocation events, not a view of current leases. Repeated events can describe renewals or repeated observations.") +
+      " This page lists records; it does not add them to dashboard aggregates.";
+    else $("eventIndexNote").textContent = "All indexed messages remain available here, including unknown or malformed events. This page does not change aggregate counts.";
+  }).catch(function(e){
+    eventIndexCursor = null; $("eventIdxOlder").disabled = true;
+    $("eventIndexStatus").firstChild.textContent = "Cannot read event index: " + String(e) + ". This is not an empty result.";
+    $("eventIndexNote").textContent = "The retained raw-log browser remains available from the events button.";
+    $("eventIndexList").textContent = "";
+  }).then(function(){ setEventIndexBusy(false); });
+}
+function refreshEventIndex(){ eventIndexCursor = null; loadEventIndex(null); }
+function loadOlderEventIndex(){ if (!eventIndexLoading && eventIndexCursor) loadEventIndex(eventIndexCursor); }
 function quickRange(mins){
   var btns = document.querySelectorAll(".qbtn");
   if (quickMins === mins){
@@ -1222,7 +2209,7 @@ function renderStats(){
   var el = $("statsPanel");
   if (!statsOpen){ el.style.display = "none"; return; }
   el.style.display = "block";
-  var srcs = {}, dsts = {}, dpts = {}, flows = {}, protos = {};
+  var srcs = {}, dsts = {}, spts = {}, tallySpts = {}, dpts = {}, aps = {}, flows = {}, protos = {};
   var dirs = { internal: 0, outbound: 0, inbound: 0, other: 0 };
   var types = { flow: 0, msg: 0 };
   var total = 0;
@@ -1257,6 +2244,9 @@ function renderStats(){
     if (p.src) srcs[p.src] = 1;
     if (p.dst) dsts[p.dst] = 1;
     if (p.dpt !== null && p.dpt !== undefined) dpts[p.dpt] = 1;
+    if (p.spt !== null && p.spt !== undefined) spts[p.spt] = 1;
+    if (p.ds === "tally" && p.spt !== null && p.spt !== undefined) tallySpts[p.spt] = 1;
+    if (p.ap) aps[p.ap] = 1;
     if (p.dst) flows[(p.src || "-") + "|" + p.dst + "|" + ((p.dpt === null || p.dpt === undefined) ? "-" : p.dpt)] = 1;
     if (p.proto !== null && p.proto !== undefined) protos[p.proto] = 1;
     if (p.dir) dirs[p.dir] = (dirs[p.dir] || 0) + (p.count || 0);
@@ -1266,12 +2256,15 @@ function renderStats(){
   var protoList = Object.keys(protos).sort(function(a,b){ return protos[b] - protos[a]; });
   var h = '';
   if (scopeLabel){
-    h += '<div style="color:#7fd0ff;font-size:11px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #3a4254">' + scopeLabel + '</div>';
+    h += '<div style="color:#7fd0ff;font-size:11px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #3a4254">' + escapeHtml(scopeLabel) + '</div>';
   }
   h += '<div class="sg"><h4>Unique counts</h4><table>' +
     '<tr><td>Sources</td><td>' + Object.keys(srcs).length + '</td></tr>' +
     '<tr><td>Destinations</td><td>' + Object.keys(dsts).length + '</td></tr>' +
+    '<tr><td>Source ports observed</td><td>' + Object.keys(spts).length + '</td></tr>' +
+    '<tr><td>Unique tally sample ports</td><td>' + Object.keys(tallySpts).length + '</td></tr>' +
     '<tr><td>Dest ports</td><td>' + Object.keys(dpts).length + '</td></tr>' +
+    '<tr><td>AP MACs</td><td>' + Object.keys(aps).length + '</td></tr>' +
     '<tr><td>Flows (src&#8594;dst:port)</td><td>' + Object.keys(flows).length + '</td></tr>' +
     '<tr><td>Protocols</td><td>' + Object.keys(protos).length + '</td></tr></table></div>';
   h += '<div class="sg"><h4>Totals (per entry)</h4><table>' +
@@ -1353,7 +2346,10 @@ canvas.addEventListener("pointermove", function(ev){
     escapeHtml(p.type) + " | " + escapeHtml(p.ds) + " | count " + p.count +
     " | sev " + sevName(p.sev) + " | " + escapeHtml(p.dir || "other") + sizeNote + "<br>" +
     "src " + escapeHtml(p.src || "-") + " &rarr; dst " + escapeHtml(p.dst || "-") +
-    " " + protoName(p.proto) + "/" + ((p.dpt == null) ? "-" : p.dpt) + "<br>" +
+    " " + protoName(p.proto) + "/" + ((p.dpt == null) ? "-" : p.dpt) +
+    " | source port " + ((p.spt == null) ? "-" : p.spt) + (p.ds === "tally" ? " (sample)" : "") +
+    " | AP " + escapeHtml(p.ap || "-") + "<br>" +
+    (p.message ? "message " + escapeHtml(p.message) + "<br>" : "") +
     "at " + escapeHtml(String(p.ts).slice(0, 23)) +
     (p.first ? "<br>first " + escapeHtml(String(p.first).slice(0, 19)) +
                " | last " + escapeHtml(String(p.last).slice(0, 19)) : "");
@@ -1424,7 +2420,14 @@ canvas.addEventListener("dblclick", function(){
 });
 window.addEventListener("keydown", function(ev){
   if (ev.key === "Escape"){
+    if ($("messageHoverDetails").style.display === "block"){
+      var hoverOwner=messageHoverOwner, focusPanel=document.activeElement===$("messageHoverDetails"); closeMessageHover();
+      if(focusPanel&&hoverOwner){messageHoverSuppressFocus=true;hoverOwner.focus();messageHoverSuppressFocus=false;}
+      return;
+    }
     if (brushing){ brushing = null; drawBrush(); return; }  // cancel in-progress brush first
+    if ($("eventIndexPanel").style.display === "flex"){ closeEventIndex(); return; }
+    if ($("eventsPanel").style.display === "flex"){ closeEvents(); return; }
     var hp = $("helpPanel");
     if (hp.style.display === "flex"){ hp.style.display = "none"; return; }
     if ($("supportMenu").style.display === "flex"){ toggleSupportMenu(false); return; }
@@ -1438,7 +2441,8 @@ function redrawFromPoints(){
   points = applyFilters();
   computeRanges();
   ensureColors();
-  draw();
+  if (activeView === "messages") renderMessageBubbles();
+  else draw();
 }
 
 var fetching = false;
@@ -1448,6 +2452,8 @@ function refresh(fitAxes){
   fetch("/api/data").then(function(r){ return r.json(); }).then(function(j){
     fetching = false;
     data = j;
+    updateSourceStatus();
+    updateRecoveryStatus();
     allPoints = buildAllPoints();
     if (fitAxes) clearFitCaches();   // explicit refresh: re-fit; auto: keep ranges stable
     redrawFromPoints();
@@ -1455,6 +2461,7 @@ function refresh(fitAxes){
   }).catch(function(e){
     fetching = false;
     $("status").textContent = "load failed: " + e;
+    if (activeView === "messages") $("messageCoverage").textContent = "Message data could not be loaded. " + e;
   });
 }
 
@@ -1473,7 +2480,14 @@ var deb = null;
 ["selX", "selY", "selC", "selS", "selYS", "chkFlipY"].forEach(function(id){
   $(id).addEventListener("change", controlChange);
 });
-window.addEventListener("resize", fit);
+$("msgSearch").addEventListener("input", function(){ messagePage = 0; renderMessageBubbles(); });
+$("msgSeverity").addEventListener("change", function(){ messagePage = 0; renderMessageBubbles(); });
+$("msgPrev").addEventListener("click", function(){ messagePage = Math.max(0, messagePage - 1); renderMessageBubbles(); });
+$("msgNext").addEventListener("click", function(){ messagePage++; renderMessageBubbles(); });
+$("messageHoverDetails").addEventListener("mouseleave", function(){
+  var panel=this,owner=messageHoverOwner; setTimeout(function(){if(messageHoverOwner===owner&&!panel.matches(":hover")&&!panel.contains(document.activeElement)&&!(owner&&owner.matches(":hover"))&&!(owner&&owner.matches(":focus")))closeMessageHover();},350);
+});
+window.addEventListener("resize", function(){ if (activeView === "scatter") fit(); else renderMessageBubbles(); });
 setInterval(function(){
   if ($("chkAuto").checked && !document.hidden) refresh(false);
 }, 30000);

@@ -12,6 +12,19 @@ condensed.json
 .trim-*.tmp
 .cond-*.tmp
 .watchdog-restart
+*.sqlite3
+*.sqlite3-*
+*.sqlite3.legacy
+*.sqlite3.legacy-*
+*.sqlite3.legacy.seal
+*.sqlite3.legacy.intent
+*.sqlite3.pending/
+*.sqlite3.writer.lock
+*.sqlite3.errors.json
+.*.sqlite3.legacy-*
+.*.sqlite3.legacy.seal-*
+.*.sqlite3.legacy.intent-*
+.*.sqlite3.errors.json-*
 
 # OS / editor
 Thumbs.db
