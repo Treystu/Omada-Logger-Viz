@@ -26,6 +26,23 @@ function functionSource(name) {
   throw new Error("unterminated function " + name);
 }
 
+const ipContext = {};
+vm.createContext(ipContext);
+vm.runInContext(functionSource("parseIPFilter"), ipContext);
+const cidr9 = ipContext.parseIPFilter("10.128.0.0/9");
+assert.equal(cidr9("10.128.0.1"), true, "/9 matches the lower boundary");
+assert.equal(cidr9("10.255.255.255"), true, "/9 matches the upper boundary");
+assert.equal(cidr9("10.1.2.3"), false, "/9 does not widen to /8");
+assert.equal(ipContext.parseIPFilter("192.0.2.128/25")("192.0.2.255"), true, "/25 includes .255");
+assert.equal(ipContext.parseIPFilter("192.0.2.128/25")("192.0.2.127"), false, "/25 excludes the preceding address");
+assert.equal(ipContext.parseIPFilter("192.0.2.64/26")("192.0.2.65"), true, "/26 masks partial octets");
+assert.equal(ipContext.parseIPFilter("203.0.113.9/32")("203.0.113.9"), true, "/32 matches one IPv4 address");
+assert.equal(ipContext.parseIPFilter("0.0.0.0/0")("255.255.255.255"), true, "/0 matches all valid IPv4 addresses");
+for (const bad of ["10.0.0.0/33","10.0.0.0/no","192.0.2.256","192.0.2.250-260","999.0.0.1"])
+  assert.equal(ipContext.parseIPFilter(bad)("10.1.2.3"), false, "invalid IP range stays safely non-matching: " + bad);
+assert.equal(ipContext.parseIPFilter("192.168.0.100-200")("192.168.0.200"), true, "last-octet ranges remain supported");
+assert.equal(ipContext.parseIPFilter("192.168.0.1,2,6-10,12")("192.168.0.8"), true, "comma shorthand remains supported");
+
 assert.match(html, /fill\("selY", AXES, "dpt"\)/, "initial Y axis is destination port");
 assert.match(html, /\$\("selY"\)\.value = "dpt";/, "reset restores destination port");
 assert.match(html, /function setView\(view\)/, "scatter and message views are switchable");
@@ -44,7 +61,11 @@ assert.match(html, /Aggregate samples show examples, not complete historical var
 assert.match(html, /Condensed aggregates provide lifetime counts/, "tally counts are explicitly labeled lifetime counts");
 assert.match(html, /do not calculate exact in-range event counts/, "time filtering does not imply exact in-range aggregate counts");
 assert.match(html, /Circle area is proportional to/, "bubble encoding states that circle area follows record count");
-assert.match(html, /no time or causal axis/i, "packed positions disclose their non-temporal meaning");
+assert.match(html, /Message X/, "message bubbles have separate X and Y controls");
+assert.match(html, /Last observed date \(UTC\)/, "message X defaults to the latest observed date");
+assert.match(html, /Activity\"\}/, "message Y has a meaningful activity default");
+assert.match(html, /messageSliceItems\(groups,keys,sevSelect\.value,useTally,axes\.x,axes\.y\)/, "message axes slice records into actual bins before drawing");
+assert.match(html, /Circle area compares record counts/, "axis legend describes the current message encoding");
 assert.match(html, /up to \" \+ MESSAGE_BUBBLE_LIMIT \+ \" variants per page/, "coverage states the current page limit");
 assert.match(html, /raw_observed_values_for_variant:g\.rawValues/, "hover details include all available variant raw values");
 assert.match(html, /records:g\.records/, "hover details include the underlying records");
@@ -57,12 +78,12 @@ assert.match(html, /messageHoverDetails\{[^}]*box-sizing:border-box/s, "hover pa
 assert.match(html, /showMessageDetails\(g,count,sevSelect\.value,grouped,useTally,rawRedacted\);/, "activating a bubble retains the full drawer action");
 assert.match(html, /querySelector\(\"button\"\)\.focus\(\)/, "opening the drawer focuses its close control");
 assert.doesNotMatch(functionSource("renderMessageBubbles"), /item\.title=/, "native title does not compete with the detail panel");
-assert.match(html, /messagePackLayout\(packItems,hostWidth,hostHeight\)/, "packed marks use measured responsive dimensions");
+assert.match(html, /messageGridLayout\(slicedItems,hostWidth,hostHeight\)/, "message marks use measured responsive axis bins");
 assert.match(html, /activityLegend.*slice\(0,10\)/s, "activity legend caps visible categories and summarizes the rest");
-assert.match(html, /messagePackLayout/, "bubbles use packed positions instead of rows");
+assert.match(html, /text\.textContent=point\.item\.label/, "bubble text shows the activity or pattern label instead of a count");
 assert.match(html, /addEventListener\("mouseenter",function\(\)\{showMessageHover/, "pointer hover opens the full details panel");
 assert.match(html, /addEventListener\("focus",function\(\)\{if\(!messageHoverSuppressFocus\)showMessageHover/, "keyboard focus opens the full details panel");
-assert.match(html, /addEventListener\("click",function\(\)\{showMessageDetails/, "click keeps the existing details drawer action");
+assert.match(html, /addEventListener\("click",function\(\)\{var detailGroup=Object\.assign\(\{\},g,\{records:point\.item\.records/, "click opens details for the exact sliced message records");
 assert.match(functionSource("showMessageHover"), /panel\.textContent=JSON\.stringify/, "hover content uses a safe text sink");
 assert.doesNotMatch(functionSource("showMessageHover"), /innerHTML/, "untrusted message data is never inserted as markup in the hover panel");
 assert.match(html, /setAttribute\("aria-label",g\.activity\.label/, "bubble detail buttons have readable keyboard labels");
@@ -228,6 +249,45 @@ const minCountPoints = capContext.applyFilters(false);
 assert.deepEqual(Array.from(minCountPoints, p => p.ds + ":" + p.count), ["tally:2", "tally:3", "raw:1"],
   "minimum count filters tally records only and keeps raw records");
 
+// The global dataset/type selectors stay scoped to scatter. Messages must still render on entry.
+const viewValues = {...filterValues,fType:"flow",fDs:"both",fMin:"0",fCap:"500000"};
+const viewContext = {activeView:"scatter",allPoints:[
+  {id:"flow-tally",type:"flow",ds:"tally",count:8,dir:"outbound",ts:"2026-11-03T12:00:00Z"},
+  {id:"message-tally",type:"msg",ds:"tally",count:4,dir:"other",ts:"2026-11-03T12:00:00Z"},
+  {id:"flow-raw",type:"flow",ds:"raw",count:1,dir:"outbound",ts:"2026-11-03T12:01:00Z"},
+  {id:"message-raw",type:"msg",ds:"raw",count:1,dir:"other",ts:"2026-11-03T12:01:00Z"}
+],legendDrill:null,capped:false,$(id){return {value:viewValues[id]===undefined?"":viewValues[id],checked:viewValues[id]===true,validity:{}};},
+  parsePortList(){return [];},parseIPFilter(){return null;},portMatch(){return false;}};
+vm.createContext(viewContext);vm.runInContext(functionSource("parseLocalDateTime"),viewContext);vm.runInContext(functionSource("applyFilters"),viewContext);
+assert.deepEqual(Array.from(viewContext.applyFilters(true),p=>p.id),["flow-tally","flow-raw"],"default scatter honors the flow-only selector");
+viewContext.activeView="messages";
+assert.deepEqual(Array.from(viewContext.applyFilters(true),p=>p.id),["message-tally","message-raw"],"Messages view includes messages without mutating the scatter selector");
+viewValues.fDs="tally";
+assert.deepEqual(Array.from(viewContext.applyFilters(true),p=>p.id),["message-tally"],"Messages respects tally selection");
+viewValues.fDs="raw";
+assert.deepEqual(Array.from(viewContext.applyFilters(true),p=>p.id),["message-raw"],"Messages respects raw selection");
+viewContext.activeView="scatter";viewValues.fDs="both";
+assert.deepEqual(Array.from(viewContext.applyFilters(true),p=>p.id),["flow-tally","flow-raw"],"returning to scatter restores the user's flow-only choice");
+viewValues.fType="both";
+const scatterAll=viewContext.applyFilters(true);
+const scatterCtx={TIMEK:{ts:true}};vm.createContext(scatterCtx);vm.runInContext(functionSource("filterScatterMessageCoordinates"),scatterCtx);
+const defaultScatterMarks=scatterCtx.filterScatterMessageCoordinates(scatterAll,"ts","dpt");
+assert.deepEqual(Array.from(defaultScatterMarks.points,p=>p.id),["flow-tally","flow-raw"],"explicitly including messages with default Y=dpt never piles null ports at the bottom");
+assert.equal(defaultScatterMarks.omitted,2,"status can report each omitted tally/raw message mark");
+const typedScatterMarks=scatterCtx.filterScatterMessageCoordinates(scatterAll,"ts","type");
+assert.equal(typedScatterMarks.points.length,4,"choosing Type plots included messages normally");
+assert.equal(typedScatterMarks.omitted,0);
+const markContext={points:[{id:"missing-msg-port",type:"msg",ts:"2026-11-03T12:00:00Z",dpt:null},{id:"missing-flow-port",type:"flow",ts:"2026-11-03T12:00:00Z",dpt:null}],sizeOf(){return 4;},colorOf(){return "blue";}};
+vm.createContext(markContext);vm.runInContext(functionSource("scatterMarks"),markContext);
+const noBottomPile=markContext.scatterMarks({pos(){return 50;}},{pos(){return null;}},"ts","dpt",{x0:0,x1:100,y0:0,y1:100});
+assert.deepEqual(Array.from(noBottomPile,m=>m.p.type),["flow"],"scatterMarks itself refuses to send missing message coordinates to the bottom lane");
+const byType=markContext.scatterMarks({pos(){return 50;}},{pos(value){return value==="msg"?60:80;}},"ts","type",{x0:0,x1:100,y0:0,y1:100});
+assert.deepEqual(Array.from(byType,m=>[m.p.type,m.y]),[["msg",60],["flow",80]],"valid message type coordinates plot in their actual lane");
+const statusElement={textContent:""};
+const statusContext={drawn:[{p:{type:"flow"}},{p:{type:"msg"}}],scatterOmittedMessages:2,capped:false,related:null,relatedStats:{flow:0,pair:0,svc:0},legendDrill:null,zoomX:null,zoomY:null,data:{entries:[{},{}],raw:[{}]},$(){return statusElement;}};
+vm.createContext(statusContext);vm.runInContext(functionSource("updStatus"),statusContext);statusContext.updStatus();
+assert.match(statusElement.textContent,/2 message marks omitted/);
+
 // Local datetime filters compare actual instants, include their displayed end precision,
 // and are shared by scatter and message-count filtering.
 const timeValues = {fSrc:"",fDst:"",fSrcNot:"",fDstNot:"",fPortIn:"",fPortNot:"",fMin:"0",fType:"both",fDs:"both",fFrom:"",fTo:"",fCap:"500000",
@@ -299,8 +359,9 @@ function element(id) {
 element("selX");
 element("supportRibbon").style.display="block";
 const switchContext = {activeView:"scatter", messageSupportRibbonDisplay:null, $:element, rendered:false, fitted:false,
+  chartStaleImage:false, closeChartDetail(){}, cancelMessagePreview(){},
   closeMessageHover(){switchContext.hoverClosed=true;},
-  renderMessageBubbles(){switchContext.rendered = true;}, fit(){switchContext.fitted = true;}};
+  openMessageChart(){switchContext.rendered = true;}, redrawFromPoints(){switchContext.redrawn=true;}, fit(){switchContext.fitted = true;}};
 vm.createContext(switchContext);
 vm.runInContext(functionSource("setView"), switchContext);
 switchContext.setView("messages");
@@ -314,6 +375,7 @@ switchContext.setView("scatter");
 assert.equal(elements.plot.style.display, "block");
 assert.equal(elements.supportRibbon.style.display,"block","support ribbon restores when returning to scatter");
 assert.equal(switchContext.fitted, true);
+assert.equal(switchContext.redrawn,true,"returning from Messages rebuilds scatter points under the retained type filter");
 
 const resetEls = {};
 function resetElement(id) {

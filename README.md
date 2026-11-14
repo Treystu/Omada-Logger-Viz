@@ -67,7 +67,7 @@ logs.
 ### Option A: versioned Windows ZIP (no Git required)
 
 Open the [latest GitHub release](https://github.com/Treystu/Omada-Logger-Viz/releases/latest)
-and download its versioned `Omada-Logger-Viz-v1.4.0-windows.zip` asset (the
+and download its versioned `Omada-Logger-Viz-v1.5.0-windows.zip` asset (the
 asset name ends in `-windows.zip`).
 In File Explorer, right-click the ZIP, choose **Extract All**, and extract
 it somewhere stable, such as `$HOME\Tools`. Open PowerShell in the extracted
@@ -75,7 +75,7 @@ project folder, or set the location to the example folder below (change
 `Tools` if you extracted somewhere else):
 
 ```powershell
-Set-Location "$HOME\Tools\Omada-Logger-Viz-v1.4.0"
+Set-Location "$HOME\Tools\Omada-Logger-Viz-v1.5.0"
 ```
 
 Replace `Tools` with the folder where you extracted it if needed. Run it from
@@ -336,9 +336,17 @@ dashboard is permanently available at http://localhost:8780 - the idle
 server costs a few MB of RAM; the only real work is building the data
 payload when a browser asks for it.
 
+The visualizer uses a compact, versioned chart feed for condensed tallies and
+the configured raw-log tail (default 20,000 records, configurable with
+`--raw-tail`). It reuses unchanged projections between refreshes and loads
+full record details only when you select a point or message bubble. The compact
+feed accepts up to 150,000 rows per source and 128 MiB per source file; a
+source that exceeds its compact limits falls back to the legacy full-data
+chart. The legacy chart remains available for older raw-tail settings that
+cannot be represented by the compact feed.
+
 Interactive time-series scatterplot of the condensed tallies (long-term)
-plus the raw-log tail (fine-grained; last 20k records, `--raw-tail` to
-change):
+plus the raw-log tail (fine-grained):
 
 - **X / Y axes** (each swappable): time, first seen, last seen, count, src,
   dst, dest port, proto, severity, flow/msg, dataset, direction
@@ -384,11 +392,30 @@ change):
 Defaults open as X = time, Y = dest port, color = src, size = count -
 "who's been talking to which services, when, and how much".
 
-The UI also has a **messages** view that groups condensed message counts by
-their normalized template and shows severity separately. Clicking a bubble
-opens the available aggregate details. It uses condensed aggregates when
-present and falls back to the retained raw tail only when no condensed
-message aggregates are available, so the same events are not counted twice.
+The scatterplot shows **flows by default**; choose `msg` or `both` to include
+messages, which may not have the fields needed for every selected axis. The
+separate **messages** view groups message counts and supports activity, pattern,
+severity, direction, source, destination, timestamp, and parsed-variable axes
+for the bubble view. Ranked and time presentations use the legacy data path.
+Click a bubble to fetch its available aggregate details. The message view uses
+condensed aggregates when present and falls back to the retained raw tail only
+when no condensed message aggregates are available, so the same events are
+not counted twice.
+
+For a faster warm start, the browser can keep a local raster preview of the
+last scatterplot and message bubbles in its IndexedDB profile. A preview
+expires after 24 hours; each saved frame is limited to 2.5 MiB for its image
+and hit references, and previews with more than 30,000 hit marks are not
+restored. The combined frame limit is therefore 5 MiB. The cache stores
+rendered pixels and hit references, not raw records or message samples as
+separate metadata; visible pixels can reproduce any displayed text, including
+identifiers or a complete short message. Anyone with access to this browser
+profile may see its saved previews. Until current live data arrives, the
+displayed preview is noninteractive; selecting points and
+loading details becomes available after the chart refresh. Use **clear saved
+preview** in the messages view to remove both locally saved frames from this
+browser profile.
+
 The events browser remains available for full retained raw lines on localhost.
 The **DHCP / event index** view searches the per-event store by activity,
 sender, IP, MAC, text, and time, with timestamp sorting and stable older-page
@@ -407,7 +434,11 @@ When the visualization is served to a non-localhost client (for example with
 message samples, raw message labels, and RFC 5424 structured-data text.
 Condensed message templates and parsed flow/header metadata remain available
 to the chart; templates may still contain identifying details and are not
-anonymized. The full raw events browser remains localhost-only.
+anonymized. The full raw events browser remains localhost-only. Saved raster
+previews are created only from a local chart session and are not served to LAN
+clients. A locally saved preview can visibly contain any text drawn on the
+chart, including identifying details or a complete short message. The clear
+saved preview control removes the cached frames from this browser profile.
 
 ## Watchdog (auto-restart)
 
@@ -526,7 +557,13 @@ startup shortcuts, and the firewall rule. It keeps the project files and
 collected data at `%LOCALAPPDATA%\OmadaSyslog`. To remove the collected data
 as well, first make sure you have any backup you need, then delete that
 folder in File Explorer. Delete the project folder separately if you want to
-remove the application files too.
+remove the application files too. To purge the data through the uninstaller,
+run `.\uninstall.ps1 -PurgeLogs` from a normal, unelevated PowerShell window.
+It deletes the data before requesting UAC to remove Windows resources; if UAC
+is canceled or the elevated uninstall fails, the script reports that the log
+purge already completed and identifies the remaining cleanup step. Running
+`-PurgeLogs` from an already elevated PowerShell is refused, with instructions
+to rerun it unelevated.
 
 ## Troubleshooting
 

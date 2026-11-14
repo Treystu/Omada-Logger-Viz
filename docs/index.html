@@ -180,7 +180,14 @@
     </div>
     <div class="card">
       <h3>Visualize live</h3>
-      <p>An interactive scatterplot, on localhost by default: swappable X/Y axes,
+      <p>An interactive scatterplot, on localhost by default: flows are shown
+      first, with messages available as an opt-in; message records can lack
+      fields required by a chosen axis. A separate message bubble view supports
+      activity, pattern, severity, direction, source, destination, time, and
+      parsed-variable axes. Ranked and time message views use the legacy data
+      path. The versioned compact chart feed refreshes projections incrementally,
+      falls back to the legacy chart if its source exceeds compact limits, and
+      fetches full details only when you select a point or bubble. Swappable X/Y axes,
       color and size encodings, log scale, RFC1918 direction slicing
       (internal / outbound / inbound / other), drag-to-zoom on any region,
       per-group aggregate sizing, pattern spotlight — click any dot to grey
@@ -189,7 +196,15 @@
       direction breakdown reflecting whatever you've spotlighted or zoomed
       into), smart IP filters (ranges, shorthand lists, CIDR), and built-in
       hover help on every control. Auto-refreshes without disturbing your
-      view.</p>
+      view. A local browser may keep warm raster previews for up to 24 hours
+      (up to 2.5 MiB per frame, 5 MiB across scatter and message frames, and
+      30,000 hit references per restored frame). The cache stores rendered
+      pixels and hit references, not raw records or message samples as separate
+      metadata. Pixels can show any displayed text, including identifying
+      details or a complete short message; anyone with access to the browser
+      profile may see them. Previews are noninteractive until current data
+      arrives. Use “clear saved preview” in the messages view to remove them
+      from that browser profile.</p>
     </div>
   </div>
   <div class="shot">
@@ -210,7 +225,7 @@
   <h2>Quick<span class="hl">start</span></h2>
 <p>For the recommended no-Git install, get the versioned Windows ZIP asset
 from the <a href="https://github.com/Treystu/Omada-Logger-Viz/releases/latest">latest GitHub release</a>
-(for v1.4.0, <code>Omada-Logger-Viz-v1.4.0-windows.zip</code>), then use File Explorer's
+(for v1.5.0, <code>Omada-Logger-Viz-v1.5.0-windows.zip</code>), then use File Explorer's
 <strong>Extract All</strong>. Open PowerShell in the extracted project folder.
 For Git, use the optional clone commands below. Keep the extracted folder in
 place after installation; the scheduled tasks use its path.</p>
@@ -255,8 +270,23 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
     <p>By default, the raw log, tallies, and searchable event index stay in
     your local AppData; no telemetry is sent. The dashboard binds to localhost
     by default. If you deliberately serve the chart to your LAN, its API
-    redacts message bodies, but templates may still contain identifying
-    information. Event search and full raw-event views remain local-only.</p>
+    redacts original message bodies, message samples, raw message labels, and
+    RFC 5424 structured data. Condensed templates and parsed flow/header data
+    remain available and can still identify someone. Event search and full
+    raw-event views remain local-only. Saved raster previews stay in the
+    browser profile and are not sent to LAN clients. Their pixels may reproduce
+    any text displayed in the chart, including identifying details or a
+    complete short message; anyone with access to that profile may see them.
+    The “clear saved preview” control removes the cached frames from that
+    profile.</p>
+  </details>
+  <details>
+    <summary>How do I remove the collected logs when uninstalling?</summary>
+    <p>Run <code>.\uninstall.ps1 -PurgeLogs</code> from a normal,
+    unelevated PowerShell window. The log folder is deleted before the UAC
+    prompt; if UAC is canceled or Windows resource removal fails afterward,
+    the uninstaller reports that the purge already happened and what cleanup
+    remains. An already elevated PowerShell window is refused for this option.</p>
   </details>
   <details>
     <summary>Why UDP only &mdash; and why Windows only?</summary>

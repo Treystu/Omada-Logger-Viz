@@ -68,21 +68,23 @@ param([string]$TaskArgs = '', [switch]$VizBoot)
     $payloadRoot = Join-Path $tempDir 'payload'
     New-Item -ItemType Directory -Path $payloadRoot | Out-Null
     $required = @('omada_syslog.py', 'omada_event_store.py', 'omada_condenser.py',
-        'watchdog.ps1', 'watchdog-health.ps1', 'omada_viz.py', 'viz.html', 'viz.ps1')
+        'watchdog.ps1', 'watchdog-health.ps1', 'omada_viz.py', 'omada_chart_cache.py', 'viz.html', 'viz.ps1')
     foreach ($file in $required) { Set-Content -LiteralPath (Join-Path $payloadRoot $file) -Value 'stub' }
     Remove-Item -LiteralPath (Join-Path $payloadRoot 'omada_event_store.py')
     Remove-Item -LiteralPath (Join-Path $payloadRoot 'watchdog-health.ps1')
+    Remove-Item -LiteralPath (Join-Path $payloadRoot 'omada_chart_cache.py')
     $script:preflightSideEffects = 0
     function New-NetFirewallRule { $script:preflightSideEffects++ }
     function Register-ScheduledTask { $script:preflightSideEffects++ }
     function Start-ScheduledTask { $script:preflightSideEffects++ }
     $missingMessage = ''
     try { Test-InstallerPayload -Root $payloadRoot } catch { $missingMessage = $_.Exception.Message }
-    Assert-Case 'preflight lists missing required runtime module and watchdog helper' `
-        ($missingMessage -match 'omada_event_store\.py' -and $missingMessage -match 'watchdog-health\.ps1')
+    Assert-Case 'preflight lists missing event store, chart cache, and watchdog helper' `
+        ($missingMessage -match 'omada_event_store\.py' -and $missingMessage -match 'watchdog-health\.ps1' -and
+            $missingMessage -match 'omada_chart_cache\.py')
     Assert-Case 'failed payload preflight performs no firewall or task operations' `
         ($script:preflightSideEffects -eq 0 -and $missingMessage -match 'No system changes were made')
-    foreach ($file in @('omada_event_store.py', 'watchdog-health.ps1')) {
+    foreach ($file in @('omada_event_store.py', 'watchdog-health.ps1', 'omada_chart_cache.py')) {
         Set-Content -LiteralPath (Join-Path $payloadRoot $file) -Value 'stub'
     }
     Test-InstallerPayload -Root $payloadRoot

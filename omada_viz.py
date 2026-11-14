@@ -11,11 +11,13 @@ Run on demand:
 Endpoints:
     /           -> viz.html (the UI, next to this script)
     /api/data   -> JSON: condensed tally entries + parsed raw-tail records
+    /api/chart/* -> versioned chart snapshots, changes, and on-demand details/search
     /api/events -> bounded pages of full lines from the retained raw log (loopback only)
     /api/recorded-events -> bounded searchable pages from the read-only event store (loopback only)
 """
 
 import argparse
+import gzip
 import ipaddress
 import json
 import os
@@ -29,6 +31,10 @@ import hashlib
 import urllib.parse
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from threading import Lock
+
+from omada_chart_cache import (ChartCache, ChartError, MAX_DETAIL_REFS, REMOTE_MESSAGE_LABEL,
+                               SCHEMA, wire_json)
 
 _LOCAL_APPDATA = (os.environ.get("LOCALAPPDATA")
                  or os.path.expanduser(r"~\AppData\Local"))
@@ -45,6 +51,9 @@ EVENT_LINE_MAX = 128 << 10
 EVENT_SCAN_MAX = 2 << 20
 RECORDED_EVENT_PAGE_DEFAULT = 100
 RECORDED_EVENT_PAGE_MAX = 200
+CHART_REQUEST_MAX = 24 << 10
+CHART_PATHS = {"/api/chart/snapshot", "/api/chart/changes", "/api/chart/detail",
+               "/api/chart/details", "/api/chart/search"}
 
 FLOW_RE = re.compile(r"IP SRC=(\S+) IP DST=(\S+) IP proto=(\d+)(?: SPT=(\d+))?(?: DPT=(\d+))?")
 AP_RE = re.compile(r"AP MAC=(\S+)")
@@ -536,23 +545,7 @@ def build_payload(args):
             for v in state.values():
                 if not isinstance(v, dict):
                     continue
-                if v.get("type") == "flow":
-                    v["dir"] = direction_of(v.get("src"), v.get("dst"))
-                else:
-                    v["dir"] = "other"
-                    sample = v.get("sample")
-                    has_sample = isinstance(sample, str) and sample != ""
-                    candidate_body = _sample_candidate_body(sample) if has_sample else ""
-                    evidence = candidate_body if has_sample else (v.get("template") or "")
-                    activity = _message_activity(evidence)
-                    activity["sample_only"] = True
-                    activity["coverage"] = "single_sample" if has_sample else "template_only"
-                    v["activity"] = activity
-                    v["candidates"] = _message_candidates(candidate_body)
-                    v["candidates_provenance"] = {
-                        "sample_only": True,
-                        "coverage": "single_sample" if has_sample else "no_sample"}
-                out["entries"].append(v)
+                out["entries"].append(_tally_record(v))
             out["sources"]["condensed"] = {"available": True, "entries": len(out["entries"])}
     except (OSError, ValueError) as e:
         out["condense_error"] = str(e)
@@ -569,6 +562,136 @@ def build_payload(args):
     return out
 
 
+def _tally_record(entry, details=True):
+    entry = dict(entry)
+    if entry.get("type") == "flow":
+        entry["dir"] = direction_of(entry.get("src"), entry.get("dst"))
+    else:
+        entry["dir"] = "other"
+        sample = entry.get("sample")
+        has_sample = isinstance(sample, str) and sample != ""
+        candidate_body = _sample_candidate_body(sample) if has_sample else ""
+        evidence = candidate_body if has_sample else (entry.get("template") or "")
+        activity = _message_activity(evidence)
+        activity["sample_only"] = True
+        activity["coverage"] = "single_sample" if has_sample else "template_only"
+        entry["activity"] = activity
+        if details:
+            entry["candidates"] = _message_candidates(candidate_body)
+            entry["candidates_provenance"] = {
+                "sample_only": True, "coverage": "single_sample" if has_sample else "no_sample"}
+    return entry
+
+
+def _chart_fields(record, keys):
+    return {key: record[key] for key in keys if key in record}
+
+
+def _chart_activity(activity):
+    return _chart_fields(activity, ("id", "label", "sample_only", "coverage"))
+
+
+def _project_tally(entry):
+    record = _tally_record(entry, details=False)
+    keys = ("type", "first", "last", "count", "occurrences", "dir")
+    if record.get("type") == "flow":
+        return _chart_fields(record, keys + ("src", "dst", "proto", "dpt", "spt_sample", "ap"))
+    chart = _chart_fields(record, keys + ("from", "sev", "template"))
+    chart["type"] = "msg"
+    chart["activity"] = _chart_activity(record["activity"])
+    return chart
+
+
+def _project_raw(line):
+    record = parse_raw_line(line, extract_message_details=False)
+    if record is None:
+        return None
+    chart = _chart_fields(record, ("type", "ts", "src", "dst", "proto", "dpt", "spt",
+                                   "ap", "sev", "dir", "label"))
+    if record["type"] == "msg":
+        chart["activity"] = _chart_activity(_message_activity(record["message_body"]))
+    return chart
+
+
+def _chart_detail_tally(entry, local=True):
+    record = _tally_record(entry)
+    if local:
+        return record
+    keys = ("type", "first", "last", "count", "occurrences", "dir")
+    if record.get("type") == "flow":
+        return _chart_fields(record, keys + ("src", "dst", "proto", "dpt", "spt_sample", "ap"))
+    allowed = _chart_fields(record, keys + ("from", "sev", "template", "candidates_provenance"))
+    allowed["activity"] = _chart_activity(record["activity"])
+    return allowed
+
+
+def _redact_remote_raw_record(record):
+    record.pop("structured_data", None)
+    record.pop("structured_data_elements", None)
+    if record.get("type") == "msg":
+        record.pop("message", None)
+        record.pop("message_body", None)
+        record["label"] = REMOTE_MESSAGE_LABEL
+        record.pop("candidates", None)
+        if isinstance(record.get("activity"), dict):
+            record["activity"].pop("variables", None)
+    return record
+
+
+def _chart_detail_raw(line, local=True):
+    record = parse_raw_line(line)
+    return record if local else _redact_remote_raw_record(record)
+
+
+def _new_chart(args):
+    return ChartCache(args, _project_tally, _project_raw, _chart_detail_tally, _chart_detail_raw,
+                      lambda: read_recovery_status(getattr(args, "recovery_status_file",
+                                                          DEFAULT_RECOVERY_STATUS)))
+
+
+def _chart_token(value):
+    if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_-]{16,32}", value):
+        raise ChartError(400, "Invalid chart cursor or record ID.")
+    return value
+
+
+def _chart_number(value):
+    if type(value) is not int or not 0 <= value <= (1 << 53) - 1:
+        raise ChartError(400, "Invalid chart revision or record version.")
+    return value
+
+
+def _chart_query(query, names, numbers):
+    try:
+        values = urllib.parse.parse_qs(query, keep_blank_values=True, max_num_fields=len(names))
+    except ValueError as e:
+        raise ChartError(400, "Invalid chart request parameters.") from e
+    if set(values) != set(names) or any(len(v) != 1 for v in values.values()):
+        raise ChartError(400, "Invalid chart request parameters.")
+    result = []
+    for name in names:
+        value = values[name][0]
+        if name in numbers:
+            if not re.fullmatch(r"[0-9]{1,16}", value):
+                raise ChartError(400, "Invalid chart revision or record version.")
+            result.append(_chart_number(int(value)))
+        else:
+            result.append(_chart_token(value))
+    return result
+
+
+def _accepts_gzip(value):
+    encodings = {}
+    for entry in value.lower().split(","):
+        name, *params = (part.strip() for part in entry.split(";"))
+        try:
+            quality = next((float(p[2:]) for p in params if p.startswith("q=")), 1)
+        except ValueError:
+            quality = 0
+        encodings[name] = quality
+    return 0 < encodings.get("gzip", encodings.get("*", 0)) <= 1
+
+
 def redact_remote_payload(payload):
     """Remove original message text fields from non-loopback chart responses.
 
@@ -582,15 +705,7 @@ def redact_remote_payload(payload):
             if isinstance(entry.get("activity"), dict):
                 entry["activity"].pop("variables", None)
     for record in payload.get("raw", []):
-        record.pop("structured_data", None)
-        record.pop("structured_data_elements", None)
-        if record.get("type") == "msg":
-            record.pop("message", None)
-            record.pop("message_body", None)
-            record["label"] = "(message text hidden for remote clients)"
-            record.pop("candidates", None)
-            if isinstance(record.get("activity"), dict):
-                record["activity"].pop("variables", None)
+        _redact_remote_raw_record(record)
     return payload
 
 
@@ -626,6 +741,17 @@ def _local_host_header_allowed(value, configured_host=None, server_port=None):
 
 
 class VizServer(ThreadingHTTPServer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._chart_lock = Lock()
+        self._chart_cache = None
+
+    def chart(self):
+        with self._chart_lock:
+            if self._chart_cache is None:
+                self._chart_cache = _new_chart(self.args)
+            return self._chart_cache
+
     def server_bind(self):
         if os.name == "nt" and hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
             # mutually exclusive with the SO_REUSEADDR that TCPServer.server_bind
@@ -692,6 +818,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(403, "application/json", json.dumps({"error": "recorded event search requires a localhost Host header"}).encode("utf-8"))
                 return
             self._serve_recorded_events(request.query)
+        elif request.path in CHART_PATHS:
+            self._serve_chart(request.path, request.query)
         elif request.path == "/api/data":
             peer_is_local = self._peer_is_local()
             if peer_is_local and not self._local_host_is_allowed():
@@ -704,6 +832,75 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, "application/json", body)
         else:
             self._send(404, "text/plain", b"not found")
+
+    def do_POST(self):
+        request = urllib.parse.urlsplit(self.path)
+        if request.path in CHART_PATHS:
+            self._serve_chart(request.path, request.query, post=True)
+        else:
+            self._send(404, "text/plain", b"not found")
+
+    def _chart_body(self):
+        if self.headers.get_content_type() != "application/json":
+            raise ChartError(415, "Chart request requires a JSON body.")
+        length = self.headers.get("Content-Length", "")
+        if not re.fullmatch(r"[0-9]{1,7}", length):
+            raise ChartError(400, "Invalid chart request length.")
+        if int(length) > CHART_REQUEST_MAX:
+            raise ChartError(413, "Chart request exceeds the size limit.")
+        try:
+            payload = json.loads(self.rfile.read(int(length)))
+        except (ValueError, RecursionError) as e:
+            raise ChartError(400, "Invalid chart request JSON.") from e
+        if not isinstance(payload, dict) or type(payload.get("schema")) is not int or payload["schema"] != SCHEMA:
+            raise ChartError(400, "Invalid chart request schema.")
+        return payload
+
+    def _serve_chart(self, path, query, post=False):
+        try:
+            local = self._peer_is_local()
+            if local and not self._local_host_is_allowed():
+                raise ChartError(403, "Local chart access requires a localhost Host header.")
+            if post != (path in ("/api/chart/details", "/api/chart/search")):
+                raise ChartError(405, "Invalid method for this chart endpoint.")
+            chart = self.server.chart()
+            if post:
+                if query:
+                    raise ChartError(400, "Invalid chart request parameters.")
+                payload = self._chart_body()
+                epoch = _chart_token(payload.get("epoch"))
+                if path == "/api/chart/search":
+                    revision = _chart_number(payload.get("revision"))
+                    search = payload.get("q")
+                    if not isinstance(search, str) or not 1 <= len(search.strip()) <= 256:
+                        raise ChartError(400, "Search must contain 1 to 256 characters.")
+                    result = chart.search(epoch, revision, search.strip().lower(), local)
+                else:
+                    refs = payload.get("refs")
+                    if not isinstance(refs, list) or not 1 <= len(refs) <= MAX_DETAIL_REFS:
+                        raise ChartError(400, "Select between 1 and %d chart records." % MAX_DETAIL_REFS)
+                    if any(not isinstance(ref, dict) for ref in refs):
+                        raise ChartError(400, "Invalid chart record reference.")
+                    parsed = [(_chart_token(ref.get("id")), _chart_number(ref.get("version"))) for ref in refs]
+                    result = chart.details(epoch, parsed, local=local)
+            elif path == "/api/chart/snapshot":
+                if query:
+                    raise ChartError(400, "Invalid chart request parameters.")
+                result = chart.snapshot(local)
+            elif path == "/api/chart/changes":
+                epoch, since = _chart_query(query, ("epoch", "since"), {"since"})
+                result = chart.changes(epoch, since, local)
+            else:
+                epoch, row_id, version = _chart_query(query, ("epoch", "id", "version"), {"version"})
+                result = chart.details(epoch, [(row_id, version)], single=True, local=local)
+            body = wire_json(result)
+            headers = {"Vary": "Accept-Encoding"}
+            if len(body) >= 1024 and _accepts_gzip(self.headers.get("Accept-Encoding", "")):
+                body = gzip.compress(body, compresslevel=1, mtime=0)
+                headers["Content-Encoding"] = "gzip"
+            self._send(200, "application/json", body, headers)
+        except ChartError as e:
+            self._send(e.status, "application/json", wire_json({"error": str(e), **e.details}))
 
     def _serve_recorded_events(self, query_string):
         """Serve a bounded page from the local event store without opening it for writes."""
@@ -790,11 +987,13 @@ class Handler(BaseHTTPRequestHandler):
         except OSError:
             self._send(404, "text/plain", b"viz.html not found next to omada_viz.py")
 
-    def _send(self, code, ctype, body):
+    def _send(self, code, ctype, body, headers=None):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        for name, value in (headers or {}).items():
+            self.send_header(name, value)
         self.end_headers()
         self.wfile.write(body)
 

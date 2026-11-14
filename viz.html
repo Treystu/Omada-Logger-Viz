@@ -14,6 +14,7 @@
   #btnGo{background:#2b4a6f;color:#e6ebf2;border:1px solid #3d5f8f;border-radius:4px;padding:4px 12px;cursor:pointer}
   #btnGo:hover{background:#35608f}
   #status{margin-left:auto;color:#8a93a3;font-size:12px;padding-bottom:4px;max-width:440px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:120px}
+  #chartNotice{position:absolute;top:4px;left:50%;transform:translateX(-50%);z-index:3;padding:4px 9px;background:#222733;color:#e0c782;border:1px solid #4e493b;border-radius:4px;pointer-events:none;font-size:12px;white-space:nowrap}
   #sourceStatus{flex:none;padding:5px 10px;border-bottom:1px solid #2a2f3a;background:#171b22;color:#8a93a3;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #sourceStatus.error{color:#ffb26b;background:#241d19}
   #recoveryStatus{flex:none;padding:5px 10px;border-bottom:1px solid #2a2f3a;background:#171b22;color:#8a93a3;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -50,10 +51,12 @@
   #eventIdxError{color:#ffb26b}
   #wrap{flex:1 1 auto;position:relative;min-height:0;overflow:hidden}
   #plot{position:absolute;inset:0;cursor:crosshair;touch-action:none}
-  #messageView{position:absolute;inset:0;overflow:auto;padding:18px;display:none;box-sizing:border-box}
+  #messageView{position:absolute;inset:0;overflow:auto;scrollbar-gutter:stable;padding:18px;display:none;box-sizing:border-box}
   #messageCoverage{color:#8a93a3;font-size:12px;margin:0 0 14px;line-height:1.5}
   #messageTools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
   #messageTools input{width:min(340px,55vw)}
+  #messageAxes{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px;color:#9db3c9;font-size:11px}
+  #messageAxes select{max-width:220px}
   #messagePageStatus{font-size:11px;color:#aeb7c6;min-width:140px;text-align:center}
   #messageViewModes{display:flex;gap:5px;align-items:center;margin:0 0 8px;flex-wrap:wrap}
   #messageSizeLegend{font-size:11px;color:#9aa4b3;margin:4px 10px 10px;line-height:1.5}
@@ -61,6 +64,10 @@
   .messageSizeSample{display:inline-flex;gap:4px;align-items:center;color:#8295aa;font-size:10px}
   .messageSizeDot{display:inline-block;border:1px solid #7fd0ff;border-radius:50%;background:#2b506d;box-sizing:border-box;flex:none}
   #messageBubbles{position:relative;display:block;min-height:240px;margin:8px 0;padding:8px;overflow:hidden;border:1px solid #2c3542;border-radius:8px;background:radial-gradient(ellipse at center,#1b222c,#141920)}
+  .messageAxisTick{position:absolute;z-index:1;color:#8295aa;font-size:9px;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
+  .messageAxisXTick{bottom:2px;text-align:center;transform:translateX(-50%);max-width:90px}
+  .messageAxisYTick{left:3px;transform:translateY(-50%);max-width:102px;text-align:right}
+  .cachedMessageBubbles{position:absolute;left:0;top:0;pointer-events:none}
   .messagePackCircle{position:absolute;display:flex;align-items:center;justify-content:center;box-sizing:border-box;border:1px solid rgba(255,255,255,.58);border-radius:50%;padding:0;color:#fff;cursor:pointer;overflow:hidden;box-shadow:inset 0 1px 5px rgba(255,255,255,.16),0 2px 5px rgba(0,0,0,.35);transition:filter .12s,transform .12s}
   .messagePackCircle:hover,.messagePackCircle:focus-visible{z-index:2;filter:brightness(1.25);outline:2px solid #fff;outline-offset:1px;transform:scale(1.035)}
   .messagePackCircle span{font-size:10px;font-weight:700;text-shadow:0 1px 3px #000;white-space:nowrap;pointer-events:none}
@@ -184,7 +191,7 @@
       <label class="dl"><input type="checkbox" id="chkDirOth" checked>other</label>
     </span>
   </div>
-  <div class="ctl" data-tip="Show only flow records, only messages (alerts / system events), or both."><label for="fType">flow/msg</label><select id="fType"><option value="both">both</option><option value="flow">flow</option><option value="msg">msg</option></select></div>
+  <div class="ctl" data-tip="Scatter starts with flows. Choose messages or both to deliberately add messages to the scatter; the separate messages view remains available."><label for="fType">flow/msg</label><select id="fType"><option value="flow" selected>flow</option><option value="both">both</option><option value="msg">msg</option></select></div>
   <div class="ctl" data-tip="Data source: long-term tallies (condensed counts), the recent raw-log tail, or both."><label for="fDs">dataset</label><select id="fDs"><option value="both">tallies + raw</option><option value="tally">tallies</option><option value="raw">raw</option></select></div>
   <button id="btnEvents" class="togbtn" onclick="openEvents()" data-tip="Browse every line currently retained in the raw log, including full messages and unparsed rows.">events</button>
   <button id="btnEventIndex" class="togbtn" onclick="openEventIndex()" data-tip="Search the local event index and browse observed DHCP allocations.">DHCP / event index</button>
@@ -215,7 +222,7 @@
 </div>
 <div id="sourceStatus">Source availability loading...</div>
 <div id="recoveryStatus">Recovery status loading...</div>
-<div id="wrap"><canvas id="plot"></canvas><div id="messageView"><div id="messageTools"><input id="msgSearch" type="search" placeholder="Search message pattern"><select id="msgSeverity" aria-label="Filter message severity"><option value="">all severities</option></select><button class="togbtn" id="msgPrev" type="button">previous</button><span id="messagePageStatus"></span><button class="togbtn" id="msgNext" type="button">next</button></div><div id="messageViewModes" role="group" aria-label="Message visualization"><button class="qbtn active" id="msgModeBubbles" type="button" aria-pressed="true" onclick="setMessagePresentation('bubbles')">bubbles</button><button class="qbtn" id="msgModeRanked" type="button" aria-pressed="false" onclick="setMessagePresentation('ranked')">ranked</button><button class="qbtn" id="msgModeTime" type="button" aria-pressed="false" onclick="setMessagePresentation('time')">time (raw only)</button></div><div id="messageSizeLegend" aria-live="polite"></div><div id="messageActivityLegend" class="messageActivityLegend" aria-label="Activity color legend"></div><p id="messageCoverage"></p><div id="messageBubbles"></div><div id="messageRanked" class="messageRankedList" style="display:none"></div><div id="messageTime" style="display:none"></div></div><div id="messageHoverDetails" role="region" aria-label="Full message details" tabindex="0"></div><div id="tip"></div><div id="brush"></div><div id="statsPanel"></div><div id="supportRibbon">
+<div id="wrap"><canvas id="plot"></canvas><div id="messageView"><div id="messageTools"><input id="msgSearch" type="search" placeholder="Search message pattern"><select id="msgSeverity" aria-label="Filter message severity"><option value="">all severities</option></select><button class="togbtn" id="msgPrev" type="button">previous</button><span id="messagePageStatus"></span><button class="togbtn" id="msgNext" type="button">next</button><button class="togbtn" id="clearChartCache" type="button" title="Clear locally saved chart previews">clear saved preview</button></div><div id="messageAxes"><label for="msgXAxis">Message X</label><select id="msgXAxis" aria-label="Message X axis"></select><label for="msgYAxis">Message Y</label><select id="msgYAxis" aria-label="Message Y axis"></select><span id="messageAxisNote"></span></div><div id="messageViewModes" role="group" aria-label="Message visualization"><button class="qbtn active" id="msgModeBubbles" type="button" aria-pressed="true" onclick="setMessagePresentation('bubbles')">bubbles</button><button class="qbtn" id="msgModeRanked" type="button" aria-pressed="false" onclick="setMessagePresentation('ranked')">ranked</button><button class="qbtn" id="msgModeTime" type="button" aria-pressed="false" onclick="setMessagePresentation('time')">time (raw only)</button></div><div id="messageSizeLegend" aria-live="polite"></div><div id="messageActivityLegend" class="messageActivityLegend" aria-label="Activity color legend"></div><p id="messageCoverage"></p><div id="messageBubbles"></div><div id="messageRanked" class="messageRankedList" style="display:none"></div><div id="messageTime" style="display:none"></div></div><div id="messageHoverDetails" role="region" aria-label="Message summary" tabindex="0"></div><div id="tip"></div><div id="brush"></div><div id="statsPanel"></div><div id="supportRibbon">
   <span class="sup-x" onclick="dismissSupport()" title="Dismiss (won't show again)">&#215;</span>
   <b>Found this useful?</b><br>
   This tool is free and always will be.
@@ -226,7 +233,7 @@
   </div>
   <span class="sup-hint">PayPal &middot; @lucas-ballek &middot; $luball</span>
 </div></div>
-<div id="detail" ondblclick="this.style.display='none'"><button onclick="document.getElementById('detail').style.display='none'">close</button><h3>entry</h3><pre id="detailBody"></pre></div>
+<div id="detail" ondblclick="closeChartDetail()"><button onclick="closeChartDetail()">close</button><h3>entry</h3><div id="chartDetailPages"></div><pre id="detailBody"></pre></div>
 <div id="eventsPanel" role="dialog" aria-label="Retained raw log events">
   <div id="eventsHead"><h3>Retained raw log</h3>
     <div id="eventsNote">Browse pages from the current retained file snapshot. The receiver may trim older rows when its size cap is reached.</div>
@@ -345,6 +352,9 @@ fill("selS", SIZEVARS, "count");
 
 var data = {entries:[], raw:[], meta:{}, generated:""};
 var allPoints = [], points = [], drawn = [];
+var scatterOmittedMessages = 0;
+var chartState = null, chartDataReady = false, chartFrame = 0, chartStaleImage = false, chartLoadFailed = false;
+var chartPointRows = new WeakMap(), chartDetailRequest = 0;
 var capped = false;
 var countMin = 0, countMax = 1, occMax = 1;
 /* polish: stable visuals across auto-refresh -
@@ -387,16 +397,18 @@ function passesZoom(p){
   return one(p, zoomX) && one(p, zoomY);
 }
 
-function buildAllPoints(){
-  var pts = [], i, k, ts;
-  for (i = 0; i < data.entries.length; i++){
-    var e = data.entries[i];
+function chartRowPoints(row, tally){
+  var cached = chartPointRows.get(row);
+  if (cached) return cached;
+  var pts = [];
+  if (tally){
+    var e = row;
     var stamps = {};
     if (e.first) stamps[e.first] = 1;
     if (e.last)  stamps[e.last] = 1;
     var occ = e.occurrences || [];
-    for (k = 0; k < occ.length; k++) stamps[occ[k]] = 1;
-    for (ts in stamps){
+    for (var k = 0; k < occ.length; k++) stamps[occ[k]] = 1;
+    for (var ts in stamps){
       if (e.type === "flow"){
         pts.push({ds:"tally", ts:ts, first:e.first, last:e.last, count:e.count||0,
           src:e.src, dst:e.dst, proto:e.proto, spt:(e.spt_sample === undefined ? null : e.spt_sample),
@@ -410,9 +422,8 @@ function buildAllPoints(){
           dir:(e.dir || "other"), label:trunc(e.template || "msg", 80), ref:e});
       }
     }
-  }
-  for (i = 0; i < data.raw.length; i++){
-    var r = data.raw[i];
+  } else {
+    var r = row;
     pts.push({ds:"raw", ts:r.ts, first:null, last:null, count:1,
       src:r.src, dst:r.dst, proto:r.proto, spt:(r.spt === undefined ? null : r.spt),
       dpt:r.dpt, ap:(r.ap === undefined ? null : r.ap),
@@ -420,6 +431,19 @@ function buildAllPoints(){
       message:(r.message === undefined ? null : r.message),
       dir:(r.dir || "other"), label:r.label, ref:r});
   }
+  for (var i = 0; i < pts.length; i++) pts[i].ordinal = i;
+  chartPointRows.set(row, pts);
+  return pts;
+}
+
+function buildAllPoints(){
+  var pts = [];
+  function append(row, tally){
+    var rowPoints = chartRowPoints(row, tally);
+    for (var i = 0; i < rowPoints.length; i++) pts.push(rowPoints[i]);
+  }
+  data.entries.forEach(function(row){ append(row, true); });
+  data.raw.forEach(function(row){ append(row, false); });
   return pts;
 }
 
@@ -443,71 +467,39 @@ function parseIPFilter(s){
   if (!s || !s.trim()) return null;
   var tokens = s.split(",").map(function(x){ return x.trim(); }).filter(Boolean);
   if (!tokens.length) return null;
-  var matchers = [];
-  var lastPrefix = null;
-  for (var i = 0; i < tokens.length; i++){
-    var t = tokens[i];
-    var dashIdx = t.lastIndexOf("-");
-    var lastDot = t.lastIndexOf(".");
-    if (t.indexOf("/") >= 0){
-      var cp = t.split("/");
-      var ipP = cp[0].split(".");
-      var bits = parseInt(cp[1], 10);
-      var octets = Math.floor(bits / 8);
-      if (octets >= 1 && octets <= 3){
-        lastPrefix = ipP.slice(0, octets).join(".");
-        matchers.push({ p: lastPrefix, lo: null, hi: null });
-      }
-    } else if (lastDot >= 0 && dashIdx > lastDot){
-      var before = t.substring(0, dashIdx);
-      var after = t.substring(dashIdx + 1);
-      var ipP2 = before.split(".");
-      if (ipP2.length >= 2){
-        lastPrefix = ipP2.slice(0, ipP2.length - 1).join(".");
-        matchers.push({ p: lastPrefix,
-                        lo: parseInt(ipP2[ipP2.length - 1], 10),
-                        hi: parseInt(after, 10) });
-      }
-    } else if (lastDot >= 0){
-      var ipP3 = t.split(".");
-      if (ipP3.length === 4){
-        lastPrefix = ipP3.slice(0, 3).join(".");
-        matchers.push({ p: lastPrefix,
-                        lo: parseInt(ipP3[3], 10),
-                        hi: parseInt(ipP3[3], 10) });
-      } else {
-        lastPrefix = t;
-        matchers.push({ p: t, lo: null, hi: null });
-      }
-    } else if (lastPrefix){
-      if (dashIdx > 0){
-        matchers.push({ p: lastPrefix,
-                        lo: parseInt(t.substring(0, dashIdx), 10),
-                        hi: parseInt(t.substring(dashIdx + 1), 10) });
-      } else {
-        matchers.push({ p: lastPrefix,
-                        lo: parseInt(t, 10),
-                        hi: parseInt(t, 10) });
-      }
-    }
+  var matchers=[],lastPrefix=null,invalidIPLike=false;
+  function octets(text,min,max){var parts=text.split(".");if(parts.length<min||parts.length>max)return null;for(var n=0;n<parts.length;n++)if(!/^\d{1,3}$/.test(parts[n])||+parts[n]>255)return null;return parts.map(function(part){return parseInt(part,10);});}
+  function ipNumber(text){var p=octets(text,4,4);return p?(((p[0]<<24)|(p[1]<<16)|(p[2]<<8)|p[3])>>>0):null;}
+  for(var i=0;i<tokens.length;i++){
+    var t=tokens[i],dash=t.lastIndexOf("-"),dot=t.lastIndexOf(".");
+    if(t.indexOf("/")>=0){
+      var cp=t.split("/"),number=cp.length===2?ipNumber(cp[0]):null,bits=cp.length===2&&/^(?:0|[1-9]\d?)$/.test(cp[1])?parseInt(cp[1],10):-1;
+      if(number!==null&&bits>=0&&bits<=32){var mask=bits===0?0:(0xffffffff<<(32-bits))>>>0;matchers.push({network:(number&mask)>>>0,mask:mask});lastPrefix=cp[0];}else invalidIPLike=true;
+    }else if(dot>=0&&dash>dot){
+      var prefix=octets(t.substring(0,dash),2,4),lo=prefix&&prefix[prefix.length-1],hi=/^\d{1,3}$/.test(t.substring(dash+1))?parseInt(t.substring(dash+1),10):-1;
+      if(prefix&&lo<=255&&hi>=lo&&hi<=255){lastPrefix=prefix.slice(0,-1).join(".");matchers.push({p:lastPrefix,lo:lo,hi:hi});}else invalidIPLike=true;
+    }else if(dot>=0){
+      var parts=octets(t,1,4);
+      if(parts&&parts.length===4){lastPrefix=parts.slice(0,3).join(".");matchers.push({p:lastPrefix,lo:parts[3],hi:parts[3]});}
+      else if(parts){lastPrefix=t;matchers.push({p:t,lo:null,hi:null});}
+      else invalidIPLike=true;
+    }else if(lastPrefix){
+      var first=dash>0&&/^\d{1,3}$/.test(t.substring(0,dash))?parseInt(t.substring(0,dash),10):-1;
+      var last=dash>0&&/^\d{1,3}$/.test(t.substring(dash+1))?parseInt(t.substring(dash+1),10):(/^\d{1,3}$/.test(t)?parseInt(t,10):-1);
+      if(first<0&&dash<0)first=last;
+      if(first>=0&&first<=last&&last<=255)matchers.push({p:lastPrefix,lo:first,hi:last});else invalidIPLike=true;
+    }else if(/^\d+(?:\.\d+){1,3}$/.test(t))invalidIPLike=true;
   }
-  if (!matchers.length) return null;
+  if(!matchers.length)return invalidIPLike?function(){return false;}:null;
   return function(ip){
-    if (!ip) return false;
-    var parts = ip.split(".");
-    for (var i = 0; i < matchers.length; i++){
-      var m = matchers[i];
-      var mp = m.p.split(".");
-      var ok = true;
-      for (var j = 0; j < mp.length; j++){
-        if (parseInt(parts[j] || "-1", 10) !== parseInt(mp[j], 10)){
-          ok = false; break;
-        }
-      }
-      if (!ok) continue;
-      if (m.lo === null) return true;
-      var next = parseInt(parts[mp.length] || "-1", 10);
-      if (next >= m.lo && next <= m.hi) return true;
+    var value=ipNumber(String(ip||""));if(value===null)return false;
+    for(var n=0;n<matchers.length;n++){
+      var m=matchers[n];
+      if(m.mask!==undefined){if(((value&m.mask)>>>0)===m.network)return true;continue;}
+      var parts=String(ip).split("."),mp=m.p.split("."),ok=true;
+      for(var j=0;j<mp.length;j++)if(parseInt(parts[j],10)!==parseInt(mp[j],10)){ok=false;break;}
+      if(!ok)continue;if(m.lo===null)return true;
+      var next=parseInt(parts[mp.length],10);if(next>=m.lo&&next<=m.hi)return true;
     }
     return false;
   };
@@ -565,7 +557,7 @@ function applyFilters(skipCap){
   var dirs = { internal: $("chkDirInt").checked, outbound: $("chkDirOut").checked,
                inbound: $("chkDirIn").checked, other: $("chkDirOth").checked };
   var fMin = parseInt($("fMin").value, 10) || 0;
-  var fType = $("fType").value, fDs = $("fDs").value;
+  var fType = (typeof activeView !== "undefined" && activeView === "messages") ? "msg" : $("fType").value, fDs = $("fDs").value;
   var fromControl=$("fFrom"), toControl=$("fTo"), fFrom=fromControl.value, fTo=toControl.value;
   var fromTime=parseLocalDateTime(fFrom,false), toTime=parseLocalDateTime(fTo,true);
   var timeError=fromControl.validity && fromControl.validity.badInput ? "From: Enter a complete local date and time, or clear the field." :
@@ -620,11 +612,13 @@ var activeView = "scatter";
 var MESSAGE_BUBBLE_LIMIT = 250;
 var messagePage = 0;
 var messagePresentation = "bubbles";
+var messageAxisOptions = ["timestamp","activity","severity","source","destination","direction","pattern"];
 var messageHoverOwner = null;
 var messageHoverSuppressFocus = false;
 var messageSupportRibbonDisplay = null;
 var messageIndexCache = new WeakMap();
 function setMessagePresentation(mode){
+  closeChartDetail();
   mode = mode === "ranked" || mode === "time" ? mode : "bubbles";
   if (mode === "time" && $("msgModeTime").disabled) return;
   messagePresentation = mode;
@@ -706,6 +700,104 @@ function messagePackLayout(items, width, height){
 function messageActivityColor(id){
   var hash=2166; for(var i=0;i<String(id).length;i++) hash=(hash*33+String(id).charCodeAt(i))|0;
   var hue=((hash>>>0)%360); return "hsl("+hue+" 58% 43%)";
+}
+function messageAxisChoices(groups, keys){
+  var choices = [{id:"timestamp",label:"Last observed date (UTC)"},{id:"activity",label:"Activity"},
+    {id:"severity",label:"Severity"},{id:"source",label:"Source"},{id:"destination",label:"Destination"},
+    {id:"direction",label:"Direction"},{id:"pattern",label:"Message pattern"}], seen = Object.create(null);
+  choices.forEach(function(choice){seen[choice.id]=true;});
+  keys.forEach(function(key){
+    var g=groups[key];
+    Object.keys(g.activity.variables||{}).forEach(function(name){var id="var:"+name;if(!seen[id]){seen[id]=true;choices.push({id:id,label:name});}});
+    Object.keys(g.rawValues||{}).forEach(function(name){var id="var:"+name;if(!seen[id]){seen[id]=true;choices.push({id:id,label:name});}});
+  });
+  return choices;
+}
+function messageAxisValue(g, axis){
+  var records=g.records||[], values=[];
+  function add(value){if(value!==null&&value!==undefined&&String(value)!==""&&values.indexOf(String(value))<0)values.push(String(value));}
+  if(axis==="timestamp"){
+    var latest="";records.forEach(function(p){var r=p.ref||{},stamp=p.ts||r.last||r.ts||r.first||"";if(stamp&&(!latest||Date.parse(stamp)>Date.parse(latest)))latest=stamp;});
+    return latest ? {value:latest.slice(0,10),label:latest.slice(0,10)} : {value:"(time unavailable)",label:"(time unavailable)"};
+  }
+  if(axis==="activity")return {value:g.activity.id,label:g.activity.label};
+  if(axis==="pattern")return {value:g.pattern,label:g.pattern};
+  if(axis==="severity"){
+    Object.keys(g.severity||{}).forEach(add);if(!values.length)return {value:"unknown",label:"Unknown"};
+    if(values.length>1)return {value:"mixed",label:"Mixed severities"};
+    return {value:values[0],label:values[0]==="unknown"?"Unknown":"Severity "+values[0]};
+  }
+  if(axis==="direction"){records.forEach(function(p){add((p.ref||{}).dir);});}
+  else if(axis==="source"){records.forEach(function(p){var r=p.ref||{};add(r.src||r.from);});Object.keys((g.rawValues||{}).from||{}).forEach(add);Object.keys((g.rawValues||{}).source||{}).forEach(add);}
+  else if(axis==="destination"){records.forEach(function(p){add((p.ref||{}).dst);});Object.keys((g.rawValues||{}).dst||{}).forEach(add);}
+  else if(axis.indexOf("var:")===0){var name=axis.slice(4);records.forEach(function(p){var r=p.ref||{},vars=(r.activity&&r.activity.variables)||{};add(vars[name]);if(Array.isArray(vars[name]))vars[name].forEach(add);});Object.keys((g.rawValues||{})[name]||{}).forEach(add);}
+  if(!values.length)return {value:"(unavailable)",label:"(unavailable)"};
+  if(values.length>1)return {value:"(multiple)",label:"(multiple values)"};
+  return {value:values[0],label:values[0]};
+}
+function messageRecordAxisValue(record, axis, group){
+  var r=record||{}, vars=(r.activity&&r.activity.variables)||{};
+  if(axis==="timestamp"){var stamp=r.last||r.ts||r.first||"";return stamp?{value:String(stamp).slice(0,10),label:String(stamp).slice(0,10)}:{value:"(time unavailable)",label:"(time unavailable)"};}
+  if(axis==="activity"){var a=r.activity||group.activity;return {value:String(a.id||group.activity.id),label:String(a.label||group.activity.label)};}
+  if(axis==="pattern"){var pattern=r.template||r.label||group.pattern;return {value:String(pattern),label:String(pattern)};}
+  if(axis==="severity"){var sev=r.sev;return sev===null||sev===undefined?{value:"unknown",label:"Unknown"}:{value:String(sev),label:"Severity "+sev};}
+  var value=null;
+  if(axis==="source") value=r.from||r.src;
+  else if(axis==="destination") value=r.dst;
+  else if(axis==="direction") value=r.dir;
+  else if(axis.indexOf("var:")===0) value=vars[axis.slice(4)];
+  if(Array.isArray(value)){
+    var unique=[];value.forEach(function(v){if(v!==null&&v!==undefined&&unique.indexOf(String(v))<0)unique.push(String(v));});
+    if(unique.length===1)value=unique[0];else if(unique.length>1)return {value:"(multiple)",label:"(multiple values)"};
+  }
+  if(value===null||value===undefined||String(value)==="")return {value:"(unknown)",label:"(unknown)"};
+  return {value:String(value),label:String(value)};
+}
+function messageSliceItems(groups, keys, severity, useTally, xAxis, yAxis){
+  var itemsByKey=Object.create(null);
+  keys.forEach(function(key){
+    var g=groups[key];
+    (g.records||[]).forEach(function(record){
+      var n=useTally?Math.max(0,Number(record.count)||0):1;
+      if(severity && String(record.sev===null||record.sev===undefined?"unknown":record.sev)!==severity)n=0;
+      if(!n)return;
+      var xv=messageRecordAxisValue(record,xAxis,g),yv=messageRecordAxisValue(record,yAxis,g),itemKey=key+"\u0001"+xv.value+"\u0001"+yv.value;
+      var item=itemsByKey[itemKey]||(itemsByKey[itemKey]={key:itemKey,variantKey:key,count:0,activityId:g.activity.id,activityLabel:g.activity.label,pattern:g.pattern,xValue:xv.value,xLabel:xv.label,yValue:yv.value,yLabel:yv.label,records:[]});
+      item.count+=n;item.records.push(record);
+    });
+  });
+  return Object.keys(itemsByKey).map(function(key){return itemsByKey[key];});
+}
+function messageBubbleLabel(item, group){
+  return trunc(item && item.pattern || group && group.pattern || item && item.activityLabel || group && group.activity && group.activity.label || "Message",32);
+}
+function messageGridLayout(items, width, height){
+  if(!items.length)return {points:[],xLabels:[],yLabels:[]};
+  var xs=[],ys=[],xLabelMap=Object.create(null),yLabelMap=Object.create(null);items.forEach(function(item){if(xs.indexOf(item.xValue)<0)xs.push(item.xValue);if(ys.indexOf(item.yValue)<0)ys.push(item.yValue);xLabelMap[item.xValue]=item.xLabel;yLabelMap[item.yValue]=item.yLabel;});
+  xs.sort(function(a,b){return a.localeCompare(b,undefined,{numeric:true});});ys.sort(function(a,b){return a.localeCompare(b,undefined,{numeric:true});});
+  var xIndex=Object.create(null),yIndex=Object.create(null);xs.forEach(function(v,i){xIndex[v]=i;});ys.forEach(function(v,i){yIndex[v]=i;});
+  var left=Math.min(116,width*.3),right=12,top=12,bottom=34,plotW=Math.max(1,width-left-right),plotH=Math.max(1,height-top-bottom);
+  var cellW=plotW/xs.length,cellH=plotH/ys.length,counts=Object.create(null);
+  items.forEach(function(item){var cell=xIndex[item.xValue]+"/"+yIndex[item.yValue];counts[cell]=(counts[cell]||0)+1;});
+  var cellOrd=Object.create(null),max=items.reduce(function(m,item){return Math.max(m,Number(item.count)||0);},1),maxCell=items.reduce(function(m,item){return Math.max(m,counts[xIndex[item.xValue]+"/"+yIndex[item.yValue]]);},1);
+  var cols=Math.min(maxCell,Math.max(1,Math.ceil(Math.sqrt(maxCell*cellW/Math.max(1,cellH))))),rows=Math.ceil(maxCell/cols),subW=cellW/cols,subH=cellH/rows,maxR=Math.max(1,Math.min(subW,subH)*.31);
+  var points=items.map(function(item){
+    var xi=xIndex[item.xValue],yi=yIndex[item.yValue],cell=xi+"/"+yi,ord=cellOrd[cell]||0;cellOrd[cell]=ord+1;
+    var row=Math.floor(ord/cols),rowStart=row*cols,rowCount=Math.min(cols,counts[cell]-rowStart),col=ord%cols,rowsUsed=Math.ceil(counts[cell]/cols);
+    var x=left+xi*cellW+(cellW-rowCount*subW)/2+(col+.5)*subW;
+    var y=top+yi*cellH+(cellH-rowsUsed*subH)/2+(row+.5)*subH;
+    var r=Math.max(2,maxR*Math.sqrt(Math.max(0,Number(item.count)||0)/max));
+    return {x:x,y:y,r:r,item:item};
+  });
+  return {points:points,xLabels:xs.map(function(value,index){return {value:value,label:xLabelMap[value]||value,x:left+(index+.5)*cellW};}),
+    yLabels:ys.map(function(value,index){return {value:value,label:yLabelMap[value]||value,y:top+(index+.5)*cellH};}),left:left,top:top};
+}
+function fillMessageAxisSelects(groups, keys){
+  var choices=messageAxisChoices(groups,keys), x=$("msgXAxis"),y=$("msgYAxis"),oldX=x.value||"timestamp",oldY=y.value||"activity";
+  [x,y].forEach(function(select){select.textContent="";choices.forEach(function(choice){var option=document.createElement("option");option.value=choice.id;option.textContent=choice.label;select.appendChild(option);});});
+  x.value=choices.some(function(c){return c.id===oldX;})?oldX:"timestamp";
+  y.value=choices.some(function(c){return c.id===oldY;})?oldY:"activity";
+  return {x:x.value,y:y.value,choices:choices};
 }
 function messageTimeSeries(groups, keys, severity){
   var events = [], missing = 0;
@@ -800,19 +892,19 @@ function addActivityValue(activityValues, activityId, field, value){
   values[value] = (values[value] || 0) + 1;
 }
 function buildMessageGroups(filtered, useTally, supplementalRaw){
-  var groups = Object.create(null), activityRawValues = Object.create(null), total = 0;
+  var groups = Object.create(null), activityRawValues = Object.create(null), activityRawRecords = Object.create(null), total = 0;
   var entryIndexes = firstMessageIndexMap(data.entries), rawIndexes = firstMessageIndexMap(data.raw);
   for (var i = 0; i < filtered.length; i++){
     var p = filtered[i];
     if (p.type !== "msg" || (useTally && p.ds !== "tally") || (!useTally && $("fDs").value === "tally" && p.ds !== "tally")) continue;
     if (!useTally && $("fDs").value !== "raw" && p.ds !== "raw") continue;
     var pattern = p.ds === "tally" ? (p.ref.template || "(template unavailable)") : (p.message || p.ref.message || p.ref.label || "(message text unavailable)");
-    var key = String(pattern), activity = activityForMessage(p, key);
+    var key = p.ref.pattern_id || String(pattern), activity = activityForMessage(p, key);
     var variantKey = activity.id + "\u0000" + key;
-    if (!Object.prototype.hasOwnProperty.call(groups, variantKey)) groups[variantKey] = {key:variantKey,pattern:key,activity:activity,count:0,severity:Object.create(null),records:[],seen:Object.create(null),rawValues:Object.create(null),sampleValues:Object.create(null),sampleCandidates:Object.create(null)};
+    if (!Object.prototype.hasOwnProperty.call(groups, variantKey)) groups[variantKey] = {key:variantKey,pattern:String(pattern),activity:activity,count:0,severity:Object.create(null),records:[],seen:Object.create(null),rawValues:Object.create(null),sampleValues:Object.create(null),sampleCandidates:Object.create(null)};
     var g = groups[variantKey];
     var recordIndex = (p.ds === "tally" ? entryIndexes : rawIndexes).get(p.ref);
-    var id = (p.ds === "tally" ? "t:" : "r:") + (recordIndex === undefined ? -1 : recordIndex);
+    var id = p.ref.id || (p.ds === "tally" ? "t:" : "r:") + (recordIndex === undefined ? -1 : recordIndex);
     if (g.seen[id]) continue;
     g.seen[id] = 1;
     var n = p.ds === "tally" ? Math.max(0, Number(p.ref.count) || 0) : 1;
@@ -847,9 +939,10 @@ function buildMessageGroups(filtered, useTally, supplementalRaw){
   var seenSupplemental = Object.create(null);
   (supplementalRaw || []).forEach(function(p){
     if (!p || p.type !== "msg" || p.ds !== "raw") return;
-    var rawIndex = rawIndexes.get(p.ref), rawId = "r:" + (rawIndex === undefined ? -1 : rawIndex); if (seenSupplemental[rawId]) return; seenSupplemental[rawId] = 1;
-    var message = p.message || p.ref.message || p.ref.label || "(message text unavailable)";
+    var rawIndex = rawIndexes.get(p.ref), rawId = p.ref.id || "r:" + (rawIndex === undefined ? -1 : rawIndex); if (seenSupplemental[rawId]) return; seenSupplemental[rawId] = 1;
+    var message = p.ref.pattern_id || p.message || p.ref.message || p.ref.label || "(message text unavailable)";
     var a = activityForMessage(p, message), seenKey = a.id;
+    (activityRawRecords[seenKey] || (activityRawRecords[seenKey] = [])).push(p.ref);
     var variables = (p.ref.activity && p.ref.activity.variables) || {};
     var recordValues = Object.create(null);
     function collect(name, value){
@@ -871,17 +964,17 @@ function buildMessageGroups(filtered, useTally, supplementalRaw){
     Object.keys(recordValues).forEach(function(field){
       Object.keys(recordValues[field]).forEach(function(value){ addActivityValue(activityRawValues, seenKey, field, value); });
     });
-    Object.keys(groups).forEach(function(key){
-      var g = groups[key]; if (g.activity.id !== seenKey) return;
-      Object.keys(recordValues).forEach(function(name){
-        if (!g.rawValues[name]) g.rawValues[name] = Object.create(null);
-        Object.keys(recordValues[name]).forEach(function(value){ g.rawValues[name][value] = 1; });
-      });
+  });
+  Object.keys(groups).forEach(function(key){
+    var g = groups[key], values = activityRawValues[g.activity.id] || {};
+    Object.keys(values).forEach(function(name){
+      g.rawValues[name] = Object.create(null);
+      Object.keys(values[name]).forEach(function(value){ g.rawValues[name][value] = 1; });
     });
   });
-  return {groups:groups,total:total,activityRawValues:activityRawValues};
+  return {groups:groups,total:total,activityRawValues:activityRawValues,activityRawRecords:activityRawRecords};
 }
-function filterMessagePatternKeys(keys, groups, query, severity){
+function filterMessagePatternKeys(keys, groups, query, severity, searchMatches, grouped, useTally){
   var q = String(query || "").trim().toLowerCase();
   return keys.filter(function(key){
     var g = groups[key];
@@ -890,7 +983,18 @@ function filterMessagePatternKeys(keys, groups, query, severity){
     Object.keys(g.rawValues || {}).forEach(function(name){ values = values.concat(Object.keys(g.rawValues[name])); });
     Object.keys(g.sampleCandidates || {}).forEach(function(name){ values = values.concat(Object.keys(g.sampleCandidates[name])); });
     var searchable = [g.pattern,g.activity.label,g.activity.id].concat(Object.keys(g.activity.variables || {}),values).join(" ").toLowerCase();
-    if (q && searchable.indexOf(q) < 0) return false;
+    if (q && searchable.indexOf(q) < 0){
+      if (!searchMatches) return false;
+      var recordMatches = g.records.some(function(record, i){
+        return i === 0 && searchMatches.pattern.has(record.id) ||
+          i === 0 && searchMatches.variables.has(record.id) ||
+          useTally && searchMatches.candidates.has(record.id);
+      });
+      var supplements = grouped.activityRawRecords[g.activity.id] || [];
+      if (!recordMatches && !supplements.some(function(record){
+        return searchMatches.variable_values.has(record.id) || searchMatches.candidates.has(record.id);
+      })) return false;
+    }
     if (severity && !Object.prototype.hasOwnProperty.call(g.severity, severity)) return false;
     return true;
   });
@@ -935,6 +1039,11 @@ function messageDetailData(g, shownCount, severity, grouped, useTally, rawRedact
 }
 function showMessageDetails(g, shownCount, severity, grouped, useTally, rawRedacted){
   closeMessageHover();
+  if (chartState){
+    openMessageChartDetail(g, shownCount, severity, grouped, useTally, rawRedacted);
+    return;
+  }
+  closeChartDetail();
   var details = messageDetailData(g,shownCount,severity,grouped,useTally,rawRedacted);
   $("detailBody").textContent = JSON.stringify(details, null, 2);
   $("detail").querySelector("h3").textContent = useTally ? "message aggregate details" : "raw message details";
@@ -942,7 +1051,12 @@ function showMessageDetails(g, shownCount, severity, grouped, useTally, rawRedac
   $("detail").querySelector("button").focus();
 }
 function showMessageHover(item,g,shownCount,severity,grouped,useTally,rawRedacted){
-  var panel=$("messageHoverDetails"), details=messageDetailData(g,shownCount,severity,grouped,useTally,rawRedacted); messageHoverOwner=item;
+  var panel=$("messageHoverDetails"), details=chartState ? {
+    activity:g.activity.label, pattern:g.pattern, displayed_count:shownCount, severity_counts:g.severity,
+    source:useTally ? "condensed aggregate" : "raw retained tail",
+    detail:chartState.data.detail_available ? "Activate to load full record details." :
+      (chartState.data.redacted_detail_available ? "Activate to load redacted record details." : "Full record details are restricted to local connections.")
+  } : messageDetailData(g,shownCount,severity,grouped,useTally,rawRedacted); messageHoverOwner=item;
   panel.textContent=JSON.stringify(details,null,2); panel.style.display="block";
   var rect=item.getBoundingClientRect(), pad=12, panelW=Math.min(560,window.innerWidth-24), panelH=Math.min(window.innerHeight*.65,560);
   var left=pad,top;
@@ -957,6 +1071,8 @@ function showMessageHover(item,g,shownCount,severity,grouped,useTally,rawRedacte
 function closeMessageHover(){var panel=$("messageHoverDetails"); if(panel) panel.style.display="none"; messageHoverOwner=null;}
 function setView(view){
   closeMessageHover();
+  closeChartDetail();
+  cancelMessagePreview();
   activeView = view === "messages" ? "messages" : "scatter";
   var supportRibbon=$("supportRibbon");
   if(activeView==="messages"){
@@ -969,11 +1085,18 @@ function setView(view){
   $("brush").style.display = "none";
   $("viewScatter").classList.toggle("active", activeView === "scatter");
   $("viewMessages").classList.toggle("active", activeView === "messages");
-  if (activeView === "messages") renderMessageBubbles();
-  else fit();
+  if (chartStaleImage) discardCachedChart();
+  if (activeView === "messages") openMessageChart();
+  else { redrawFromPoints(); fit(); }
 }
 function renderMessageBubbles(){
   var host = $("messageBubbles"), rankedHost = $("messageRanked"), timeHost = $("messageTime"), coverage = $("messageCoverage"), sizeLegend = $("messageSizeLegend");
+  var searchQuery = $("msgSearch").value.trim(), search = getChartSearch(searchQuery);
+  if (search && !search.matches && messagePreview && messagePreview.view === messageCacheView()){
+    coverage.textContent = search.error ? "Cached message bubbles · live search failed." : "Cached message bubbles · searching live data…";
+    return;
+  }
+  cancelMessagePreview();
   closeMessageHover();
   host.textContent = ""; rankedHost.textContent = ""; timeHost.textContent = "";
   sizeLegend.textContent = "";
@@ -1018,12 +1141,18 @@ function renderMessageBubbles(){
     sevSelect.appendChild(option);
   });
   sevSelect.value = severities[selectedSeverity] ? selectedSeverity : "";
-  keys = filterMessagePatternKeys(keys, groups, $("msgSearch").value, sevSelect.value);
+  if (search && !search.matches){
+    coverage.textContent += search.error ? " Search could not be completed. Change the query or refresh to try again." : " Searching the current chart revision…";
+    $("messagePageStatus").textContent = "";
+    $("msgPrev").disabled = $("msgNext").disabled = true;
+    return;
+  }
+  keys = filterMessagePatternKeys(keys, groups, searchQuery, sevSelect.value, search && search.matches, grouped, useTally);
   keys.sort(function(a,b){ return messageCountFor(groups[b], sevSelect.value) - messageCountFor(groups[a], sevSelect.value); });
   var matchingTotal = keys.reduce(function(sum,k){ return sum + messageCountFor(groups[k], sevSelect.value); }, 0);
-  coverage.textContent += " Overall: " + allTotal.toLocaleString() + " records across " + allPatternCount.toLocaleString() + " message variants. Current search/severity matches " + keys.length.toLocaleString() + " variants (" + matchingTotal.toLocaleString() + " records). Showing page " + (messagePage+1).toLocaleString() + " of " + Math.max(1,Math.ceil(keys.length/MESSAGE_BUBBLE_LIMIT)).toLocaleString() + " (up to " + MESSAGE_BUBBLE_LIMIT + " variants per page); use next/previous to reach every match.";
   var matchingKeys = keys.slice(), pageInfo = messagePageSlice(keys, messagePage, MESSAGE_BUBBLE_LIMIT);
   messagePage = pageInfo.page;
+  coverage.textContent += " Overall: " + allTotal.toLocaleString() + " records across " + allPatternCount.toLocaleString() + " message variants. Current search/severity matches " + keys.length.toLocaleString() + " variants (" + matchingTotal.toLocaleString() + " records). Showing page " + (messagePage+1).toLocaleString() + " of " + pageInfo.pageCount.toLocaleString() + " (up to " + MESSAGE_BUBBLE_LIMIT + " variants per page); use next/previous to reach every match.";
   $("msgPrev").disabled = pageInfo.page === 0;
   $("msgNext").disabled = pageInfo.page >= pageInfo.pageCount - 1;
   $("messagePageStatus").textContent = keys.length ? (pageInfo.start + 1).toLocaleString() + "–" + pageInfo.end.toLocaleString() + " of " + keys.length.toLocaleString() : "0 patterns";
@@ -1040,7 +1169,7 @@ function renderMessageBubbles(){
   var max = messageCountFor(groups[keys[0]], sevSelect.value), clusterNodes = Object.create(null);
   var activitySummaries = messageActivitySummary(groups,matchingKeys,keys,sevSelect.value);
   if (messagePresentation === "bubbles"){
-    sizeLegend.textContent = "Circle area is proportional to " + (sevSelect.value ? "records at selected severity" : "all matching records") + "; largest circle on this page = " + max.toLocaleString() + " records. Colors group activity types. Positions show grouping only, with no time or causal axis. Hover or focus for full details; click to pin details.";
+    sizeLegend.textContent = "Circle area is proportional to " + (sevSelect.value ? "records at selected severity" : "all matching records") + "; largest circle on this page = " + max.toLocaleString() + " records. Colors group activity types. Positions show grouping only, with no time or causal axis. Hover or focus for a summary; activate to load details.";
   } else if (messagePresentation === "ranked"){
     sizeLegend.textContent = "Horizontal bars compare " + (sevSelect.value ? "records at the selected severity" : "all matching records") + " within this page. Rows remain grouped by activity; click a row for record details.";
   } else {
@@ -1081,28 +1210,37 @@ function renderMessageBubbles(){
     updStatus(); return;
   }
   var activityLegend = $("messageActivityLegend"); activityLegend.textContent = "";
-  var hostWidth = Math.max(1,host.clientWidth-16), hostHeight = Math.max(300,Math.min(560,window.innerHeight-300));
-  host.style.height = hostHeight + "px";
+  var hostHeight = sizeMessagePlot(), hostWidth = Math.max(1,host.clientWidth-16);
+  var axes=fillMessageAxisSelects(groups,matchingKeys);
+  var slicedItems=messageSliceItems(groups,keys,sevSelect.value,useTally,axes.x,axes.y);
+  var bubbleMax=slicedItems.reduce(function(m,item){return Math.max(m,Number(item.count)||0);},1);
+  var xAxisChoice=axes.choices.find(function(choice){return choice.id===axes.x;}),yAxisChoice=axes.choices.find(function(choice){return choice.id===axes.y;});
+  $("messageAxisNote").textContent="Each matching record is assigned once to its selected X/Y bins.";
+  sizeLegend.textContent="Circle area compares record counts; colors group activity. X uses "+(xAxisChoice?xAxisChoice.label:axes.x)+" and Y uses "+(yAxisChoice?yAxisChoice.label:axes.y)+". Aggregate counts are lifetime totals placed once at the row's last observed time; bins do not split historical counts. Hover or focus for full summary.";
   var legendGroups=Object.create(null);
   matchingKeys.forEach(function(key){var g=groups[key],id=g.activity.id.indexOf("unknown:")===0?"unknown":g.activity.id,label=id==="unknown"?"Unknown activity":g.activity.label,slot=legendGroups[id]||(legendGroups[id]={label:label,total:0,variants:0});slot.total+=messageCountFor(g,sevSelect.value);slot.variants++;});
   var legendOrder=Object.keys(legendGroups).sort(function(a,b){return legendGroups[b].total-legendGroups[a].total || a.localeCompare(b);}), visibleActivityIds=legendOrder.slice(0,10), visibleActivitySet=Object.create(null);
   visibleActivityIds.forEach(function(id){visibleActivitySet[id]=1;});
-  var packItems = keys.map(function(key){var g=groups[key],id=g.activity.id.indexOf("unknown:")===0?"unknown":g.activity.id;return {key:key,count:messageCountFor(g,sevSelect.value),activityId:visibleActivitySet[id]?id:"other",activityLabel:g.activity.label};});
-  var layout = messagePackLayout(packItems,hostWidth,hostHeight), legendActivities=Object.create(null);
+  slicedItems.forEach(function(item){var g=groups[item.variantKey],id=g.activity.id.indexOf("unknown:")===0?"unknown":g.activity.id;item.activityId=visibleActivitySet[id]?id:"other";item.label=messageBubbleLabel(item,g);});
+  var grid=messageGridLayout(slicedItems,hostWidth,hostHeight),layout=grid.points,legendActivities=Object.create(null);
   visibleActivityIds.forEach(function(id){var slot=legendGroups[id],label=id==="unknown"?"Unknown activity":slot.label;legendActivities[id]={label:label,color:messageActivityColor(id),total:slot.total,variants:slot.variants};});
   if(legendOrder.length>visibleActivityIds.length){var other=legendOrder.slice(visibleActivityIds.length).reduce(function(out,id){out.total+=legendGroups[id].total;out.variants+=legendGroups[id].variants;return out;},{total:0,variants:0});legendActivities.other={label:"Other activities",color:messageActivityColor("other"),total:other.total,variants:other.variants};}
+  host.style.paddingLeft="8px";
+  grid.xLabels.forEach(function(tick){var node=document.createElement("span");node.className="messageAxisTick messageAxisXTick";node.textContent=trunc(tick.label,22);node.title=tick.label;node.style.left=(tick.x+8)+"px";node.style.width="92px";host.appendChild(node);});
+  grid.yLabels.forEach(function(tick){var node=document.createElement("span");node.className="messageAxisTick messageAxisYTick";node.textContent=trunc(tick.label,24);node.title=tick.label;node.style.top=tick.y+"px";node.style.width=(grid.left-12)+"px";host.appendChild(node);});
   layout.forEach(function(point){
-    var key=point.item.key,g=groups[key],count=point.item.count, activityId=point.item.activityId, color=messageActivityColor(activityId);
+    var key=point.item.variantKey,g=groups[key],count=point.item.count, activityId=point.item.activityId, color=messageActivityColor(activityId);
     var item=document.createElement("button"); item.type="button"; item.className="messagePackCircle";
     item.style.width=(point.r*2)+"px"; item.style.height=(point.r*2)+"px"; item.style.left=(point.x-point.r+8)+"px"; item.style.top=(point.y-point.r)+"px"; item.style.background=color;
-    item.setAttribute("aria-label",g.activity.label+", "+count.toLocaleString()+" records, "+g.pattern+". Focus for full details; activate to open details.");
-    if(point.r>=12){var text=document.createElement("span");text.textContent=count.toLocaleString();item.appendChild(text);}
+    item.setAttribute("aria-label",g.activity.label+", "+count.toLocaleString()+" records, "+g.pattern+"; X "+point.item.xLabel+", Y "+point.item.yLabel+". Focus for summary; activate to open details.");
+    item.style.zIndex=String(Math.min(2,Math.floor(point.r/8)));
+    if(point.r>=4){var text=document.createElement("span");text.textContent=point.item.label;text.style.fontSize=Math.max(6,Math.min(10,point.r*.7))+"px";item.appendChild(text);}
     item.addEventListener("mouseenter",function(){showMessageHover(item,g,count,sevSelect.value,grouped,useTally,rawRedacted);});
     item.addEventListener("focus",function(){if(!messageHoverSuppressFocus)showMessageHover(item,g,count,sevSelect.value,grouped,useTally,rawRedacted);});
     item.addEventListener("keydown",function(ev){if(ev.key==="ArrowDown"&&$("messageHoverDetails").style.display==="block"){ev.preventDefault();$("messageHoverDetails").focus();}});
     item.addEventListener("mouseleave",function(){setTimeout(function(){var panel=$("messageHoverDetails");if(messageHoverOwner===item&&!panel.matches(":hover")&&!item.matches(":focus"))closeMessageHover();},350);});
     item.addEventListener("blur",function(){setTimeout(function(){var panel=$("messageHoverDetails");if(messageHoverOwner===item&&!panel.matches(":hover")&&!panel.contains(document.activeElement))closeMessageHover();},350);});
-    item.addEventListener("click",function(){showMessageDetails(g,count,sevSelect.value,grouped,useTally,rawRedacted);});
+    item.addEventListener("click",function(){var detailGroup=Object.assign({},g,{records:point.item.records,count:count,severity:g.severity});showMessageDetails(detailGroup,count,sevSelect.value,grouped,useTally,rawRedacted);});
     host.appendChild(item);
   });
   Object.keys(legendActivities).sort(function(a,b){return legendActivities[b].total-legendActivities[a].total;}).forEach(function(id){
@@ -1110,10 +1248,11 @@ function renderMessageBubbles(){
     entry.className="messageLegendItem";swatch.className="messageLegendSwatch";swatch.style.background=a.color;label.textContent=a.label+" · "+a.total.toLocaleString()+" · "+a.variants+" variants";entry.appendChild(swatch);entry.appendChild(label);activityLegend.appendChild(entry);
   });
   var keyBox = document.createElement("span"); keyBox.className = "messageSizeKey";
-  [{count:Math.max(1,Math.floor(max/4)),label:Math.max(1,Math.floor(max/4)).toLocaleString() + " records"},{count:max,label:max.toLocaleString() + " records"}].forEach(function(sample){
-    var entry=document.createElement("span");entry.className="messageSizeSample";var dot=document.createElement("span");dot.className="messageSizeDot";var size=messageBubbleDiameter(sample.count,max)*.22;dot.style.width=size+"px";dot.style.height=size+"px";var label=document.createElement("span");label.textContent=sample.label;entry.appendChild(dot);entry.appendChild(label);keyBox.appendChild(entry);
+  [{count:Math.max(1,Math.floor(bubbleMax/4)),label:Math.max(1,Math.floor(bubbleMax/4)).toLocaleString() + " records"},{count:bubbleMax,label:bubbleMax.toLocaleString() + " records"}].forEach(function(sample){
+    var entry=document.createElement("span");entry.className="messageSizeSample";var dot=document.createElement("span");dot.className="messageSizeDot";var size=messageBubbleDiameter(sample.count,bubbleMax)*.22;dot.style.width=size+"px";dot.style.height=size+"px";var label=document.createElement("span");label.textContent=sample.label;entry.appendChild(dot);entry.appendChild(label);keyBox.appendChild(entry);
   });
   sizeLegend.appendChild(keyBox);
+  scheduleMessageCache(layout,groups);
   updStatus();
 }
 
@@ -1443,17 +1582,22 @@ var canvas = $("plot"), wrap = $("wrap"), tip = $("tip");
 var ctx = canvas.getContext("2d");
 var dpr = window.devicePixelRatio || 1;
 var MX0 = 78, MXR = 18, MTOP = 16, MBOT = 66;
+var chartPaint = null;
 
 /* canvas/wrap size divergence (toolbar wrapping, window resize while the
    status bar text grows) must be corrected before any interaction or draw:
    otherwise the drawn geometry and hit-testing drift apart. */
 function canvasSynced(){
-  return (Math.abs(wrap.clientHeight - canvas.clientHeight) <= 1 &&
+  return (dpr === (window.devicePixelRatio || 1) &&
+          Math.abs(wrap.clientHeight - canvas.clientHeight) <= 1 &&
           Math.abs(wrap.clientWidth - canvas.clientWidth) <= 1);
 }
 
 function fit(){
+  if (chartStaleImage) discardCachedChart();
   var w = wrap.clientWidth, h = wrap.clientHeight;
+  dpr = window.devicePixelRatio || 1;
+  chartPaint = null;
   canvas.width = Math.max(10, Math.round(w * dpr));
   canvas.height = Math.max(10, Math.round(h * dpr));
   canvas.style.width = w + "px";
@@ -1462,13 +1606,78 @@ function fit(){
   draw();
 }
 
-function draw(){
+function scatterMarks(sx,sy,Xv,Yv,plot){
+  var marks = [];
+  for (var i = 0; i < points.length; i++){
+    var p = points[i], vx = p[Xv], vy = p[Yv];
+    if (vx === null || vx === undefined || p.type === "msg" && (vy === null || vy === undefined)) continue;
+    var px = sx.pos(vx), py = vy === null || vy === undefined ? plot.y1 : sy.pos(vy);
+    if (px === null || isNaN(px)) continue;
+    if (py === null || isNaN(py)){ if(p.type==="msg")continue; py = plot.y1; }
+    if (!(px >= plot.x0 - 4 && px <= plot.x1 + 4 && py >= plot.y0 - 4 && py <= plot.y1 + 4)) continue;
+    marks.push({p:p,x:px,y:py,r:sizeOf(p),color:colorOf(p)});
+  }
+  return marks;
+}
+function filterScatterMessageCoordinates(source, Xv, Yv){
+  var included=[],omitted=0;
+  function present(point,axis){
+    var value=point[axis];
+    if(value===null||value===undefined||String(value).trim()==="")return false;
+    if(TIMEK[axis])return isFinite(Date.parse(value));
+    if(axis==="count"||axis==="dpt"&&typeof value==="number")return isFinite(+value);
+    return true;
+  }
+  source.forEach(function(point){
+    if(point.type==="msg"&&(!present(point,Xv)||!present(point,Yv))){omitted++;return;}
+    included.push(point);
+  });
+  return {points:included,omitted:omitted};
+}
+
+function scatterDirtyStrips(previous, signature, marks, W, ratio, legendStart){
+  if (!previous || previous.signature !== signature) return null;
+  function key(mark){
+    return mark.p.ref && mark.p.ref.id ? mark.p.ref.id + "\u0000" + mark.p.ts : mark.p;
+  }
+  var old = new Map(previous.marks.map(function(mark,i){ return [key(mark),{mark:mark,index:i}]; }));
+  var strips = [], order = -1;
+  function add(mark){
+    var padding = mark.r + 2;
+    strips.push([Math.max(0,Math.floor((mark.x-padding)*ratio)/ratio),
+      Math.min(W,Math.ceil((mark.x+padding)*ratio)/ratio)]);
+  }
+  for (var i = 0; i < marks.length; i++){
+    var mark = marks[i], identity = key(mark), before = old.get(identity);
+    if (!before){ add(mark); continue; }
+    if (before.index < order) return null;
+    order = before.index;
+    old.delete(identity);
+    var prior = before.mark;
+    if (prior.x !== mark.x || prior.y !== mark.y || prior.r !== mark.r || prior.color !== mark.color){
+      add(prior); add(mark);
+    }
+  }
+  old.forEach(function(before){ add(before.mark); });
+  if (legendStart < W) strips.push([Math.max(0,Math.floor(legendStart*ratio)/ratio),W]);
+  strips.sort(function(a,b){ return a[0]-b[0]; });
+  var merged = [];
+  strips.forEach(function(strip){
+    var last = merged[merged.length - 1];
+    if (last && strip[0] <= last[1]) last[1] = Math.max(last[1],strip[1]);
+    else merged.push(strip);
+  });
+  var width = merged.reduce(function(sum,strip){ return sum + strip[1]-strip[0]; },0);
+  return width < W * 0.55 && merged.length <= 24 ? merged : null;
+}
+
+function draw(allowPartial){
+  if (chartStaleImage) discardCachedChart();
   if (!canvasSynced()){
     fit();   // re-fit to the current wrap size and redraw at correct geometry
     return;  // fit() already called draw()
   }
   var W = wrap.clientWidth, H = wrap.clientHeight;
-  ctx.clearRect(0, 0, W, H);
   var x0 = MX0, x1 = W - MXR, y0 = MTOP, y1 = H - MBOT;
   var Xv = $("selX").value, Yv = $("selY").value;
   var flip = $("chkFlipY").checked;
@@ -1477,15 +1686,35 @@ function draw(){
   var sy = makeScale(Yv, points, flip ? y0 : y1, flip ? y1 : y0, $("selYS").value === "log",
                      "y|" + Yv, (zoomY && zoomY.v === Yv) ? zoomY : null);
   lastScaleX = sx; lastScaleY = sy; lastPlot = { x0: x0, x1: x1, y0: y0, y1: y1 };
-  drawn = [];
+  chartFrame++;
+  drawn = []; legendHits = [];
   if (!sx || !sy || !points.length){
+    chartPaint = null;
+    ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = "#6b7686"; ctx.font = "14px system-ui"; ctx.textAlign = "center";
-    ctx.fillText(points.length ? "no plottable points for this X/Y selection" : "no points match the filters", W / 2, H / 2);
+    ctx.fillText(points.length ? "no plottable points for this X/Y selection" : scatterOmittedMessages ? "messages lack values for the selected X/Y axes" : "no points match the filters", W / 2, H / 2);
     buildHitGrid();
     updStatus();
     if (statsOpen) renderStats();
     return;
   }
+  var marks = scatterMarks(sx,sy,Xv,Yv,lastPlot);
+  var signature = JSON.stringify([W,H,dpr,Xv,Yv,sx.ticks,sy.ticks,showLegend]);
+  var strips = allowPartial && related === null ? scatterDirtyStrips(chartPaint,signature,marks,W,dpr,showLegend ? x1 - 156 : W) : null;
+  chartPaint = related === null ? {signature:signature,marks:marks} : null;
+  if (strips && !strips.length){
+    drawn = marks;
+    buildHitGrid(); updStatus();
+    if (statsOpen) renderStats();
+    scheduleChartCache();
+    return;
+  }
+  if (strips){
+    ctx.save(); ctx.beginPath();
+    strips.forEach(function(strip){ ctx.rect(strip[0],0,strip[1]-strip[0],H); });
+    ctx.clip();
+  }
+  ctx.clearRect(0, 0, W, H);
   var i, t;
   ctx.strokeStyle = "#232a36"; ctx.fillStyle = "#8a93a3"; ctx.font = "11px system-ui";
   ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
@@ -1521,38 +1750,23 @@ function draw(){
     }
   }
   var popList = [];
-  for (i = 0; i < points.length; i++){
-    var p = points[i];
-    var vx = p[Xv], vy = p[Yv];
-    if (vx === null || vx === undefined) continue;  // X must have a value to plot
-    var px = sx.pos(vx);
-    if (px === null || isNaN(px)) continue;  // outside zoom domain
-    /* Plot null-Y points at the bottom edge so messages (dpt=null,
-       dst=null etc.) are always visible regardless of axis selection */
-    var py;
-    if (vy === null || vy === undefined){
-      py = y1;
-    } else {
-      py = sy.pos(vy);
-      if (py === null || isNaN(py)) py = y1;
-    }
-    /* NaN-safe clip: fails closed on non-finite coordinates */
-    if (!(px >= x0 - 4 && px <= x1 + 4 && py >= y0 - 4 && py <= y1 + 4)) continue;
+  drawn = marks;
+  for (i = 0; i < marks.length; i++){
+    var mark = marks[i], p = mark.p, px = mark.x, py = mark.y;
+    if (strips && !strips.some(function(strip){ return px + mark.r + 2 >= strip[0] && px - mark.r - 2 <= strip[1]; })) continue;
     if (relMode){
       var lvl = relationOf(p);
       if (lvl > 0){
         popList.push([p, px, py, lvl]);
-        drawn.push({ p: p, x: px, y: py });
         continue;                       // related drawn on top in pass 2
       }
       ctx.globalAlpha = 0.12;            // non-related: quiet grey
       ctx.fillStyle = "#5a6373";
     } else {
       ctx.globalAlpha = 0.6;
-      ctx.fillStyle = colorOf(p);
+      ctx.fillStyle = mark.color;
     }
-    ctx.beginPath(); ctx.arc(px, py, sizeOf(p), 0, 6.2832); ctx.fill();
-    drawn.push({ p: p, x: px, y: py });
+    ctx.beginPath(); ctx.arc(px, py, mark.r, 0, 6.2832); ctx.fill();
   }
   if (relMode){
     for (i = 0; i < popList.length; i++){
@@ -1572,9 +1786,11 @@ function draw(){
   ctx.globalAlpha = 1;
   if (showLegend) drawLegend(x1);
   if (relMode && showLegend) drawSpotlightLegend();
+  if (strips) ctx.restore();
   buildHitGrid();
   updStatus();
   if (statsOpen) renderStats();
+  scheduleChartCache();
 }
 
 function drawSizeLegend(x1, yTop, withBacking){
@@ -1713,6 +1929,7 @@ function updStatus(){
   }
   $("status").textContent = drawn.length + " pts" + (capped ? " (capped)" : "") +
     " | flows " + flowPoints + ", messages " + msgPoints +
+    (scatterOmittedMessages ? " | " + scatterOmittedMessages + " message marks omitted (missing selected X/Y; try Type or Severity)" : "") +
     " | tallies " + data.entries.length + " entries, raw " + data.raw.length + " recs" +
     ((zoomX || zoomY) ? " | zoomed (dbl-click to reset)" : "") + drill + rel;
 }
@@ -1825,6 +2042,7 @@ function drawBrush(){
 }
 function applyBrushZoom(b, useX, useY){
   if (!lastScaleX || !lastScaleY || !lastPlot) return;
+  closeChartDetail();
   var px0 = Math.max(Math.min(b.x0, b.x1), lastPlot.x0);
   var px1 = Math.min(Math.max(b.x0, b.x1), lastPlot.x1);
   var py0 = Math.max(Math.min(b.y0, b.y1), lastPlot.y0);
@@ -1859,6 +2077,7 @@ function applyBrushZoom(b, useX, useY){
   redrawFromPoints();
 }
 function resetZoom(){
+  closeChartDetail();
   if (!zoomX && !zoomY) return;
   zoomX = zoomY = null;
   redrawFromPoints();
@@ -1866,7 +2085,7 @@ function resetZoom(){
 function resetFilters(){
   ["fSrc", "fDst", "fSrcNot", "fDstNot", "fPortIn", "fPortNot"].forEach(function(id){ $(id).value = ""; });
   $("fMin").value = "0";
-  $("fType").value = "both";
+  $("fType").value = "flow";
   $("fDs").value = "both";
   ["chkDirInt", "chkDirOut", "chkDirIn", "chkDirOth"].forEach(function(id){ $(id).checked = true; });
   $("fFrom").value = "";
@@ -2188,7 +2407,7 @@ function toggleOverlay(which){
     showDrawer = !showDrawer;
     try { localStorage.setItem("omada_drawer", showDrawer ? "1" : "0"); } catch (e) {}
     $("togDrawer").classList.toggle("active", showDrawer);
-    if (!showDrawer) $("detail").style.display = "none";
+    if (!showDrawer) closeChartDetail();
   }
 }
 $("togLegend").classList.toggle("active", showLegend);
@@ -2317,9 +2536,9 @@ document.addEventListener("click", function(ev){
 window.addEventListener("resize", function(){ toggleSupportMenu(false); });
 
 canvas.addEventListener("pointerdown", function(ev){
-  if (ev.button !== 0) return;                    // left button / primary touch only
+  if (ev.button !== 0 || chartStaleImage) return;  // left button / primary touch only
   try { canvas.setPointerCapture(ev.pointerId); } catch (e) {}
-  brushing = { x0: ev.offsetX, y0: ev.offsetY, x1: ev.offsetX, y1: ev.offsetY };
+  brushing = { x0: ev.offsetX, y0: ev.offsetY, x1: ev.offsetX, y1: ev.offsetY, frame:chartFrame };
   dragMoved = false;
 });
 canvas.addEventListener("pointermove", function(ev){
@@ -2344,10 +2563,10 @@ canvas.addEventListener("pointermove", function(ev){
   }
   tip.innerHTML = "<b>" + escapeHtml(p.label) + "</b><br>" +
     escapeHtml(p.type) + " | " + escapeHtml(p.ds) + " | count " + p.count +
-    " | sev " + sevName(p.sev) + " | " + escapeHtml(p.dir || "other") + sizeNote + "<br>" +
+    " | sev " + escapeHtml(sevName(p.sev)) + " | " + escapeHtml(p.dir || "other") + sizeNote + "<br>" +
     "src " + escapeHtml(p.src || "-") + " &rarr; dst " + escapeHtml(p.dst || "-") +
-    " " + protoName(p.proto) + "/" + ((p.dpt == null) ? "-" : p.dpt) +
-    " | source port " + ((p.spt == null) ? "-" : p.spt) + (p.ds === "tally" ? " (sample)" : "") +
+    " " + escapeHtml(protoName(p.proto)) + "/" + escapeHtml(p.dpt == null ? "-" : p.dpt) +
+    " | source port " + escapeHtml(p.spt == null ? "-" : p.spt) + (p.ds === "tally" ? " (sample)" : "") +
     " | AP " + escapeHtml(p.ap || "-") + "<br>" +
     (p.message ? "message " + escapeHtml(p.message) + "<br>" : "") +
     "at " + escapeHtml(String(p.ts).slice(0, 23)) +
@@ -2368,6 +2587,7 @@ canvas.addEventListener("pointerup", function(ev){
   var b = brushing;
   brushing = null;
   drawBrush();
+  if (b.frame !== chartFrame || chartStaleImage) return;
   var dx = Math.abs(b.x1 - b.x0), dy = Math.abs(b.y1 - b.y0);
   if (dragMoved){
     if (dx < 14 && dy < 14) return;         // micro-drag on both axes: no zoom
@@ -2377,7 +2597,7 @@ canvas.addEventListener("pointerup", function(ev){
   /* plain click - handled at pointerup precision (fractional coords, same
      as the hover), after correcting any canvas/wrap geometry drift so the
      clicked screen position maps onto the dot the cursor was over */
-  if (!canvasSynced()) fit();
+  if (!canvasSynced()){ fit(); return; }
   /* check legend clicks first - clicking a color-key entry DRILLS DOWN
      to that value (filters the view to only that category) */
   for (var li = 0; li < legendHits.length; li++){
@@ -2397,6 +2617,7 @@ canvas.addEventListener("pointerup", function(ev){
   }
   var h = hitTest(ev.offsetX, ev.offsetY);
   if (!h){
+    closeChartDetail();
     if (related){ related = null; draw(); }   // empty click clears the spotlight
     return;
   }
@@ -2404,10 +2625,7 @@ canvas.addEventListener("pointerup", function(ev){
   related = { src: p.src, dst: p.dst, proto: p.proto, dpt: p.dpt,
               type: p.type, label: p.label };
   draw();                                     // re-render with the spotlight
-  if (showDrawer){
-    $("detailBody").textContent = JSON.stringify(p.ref, null, 2);
-    $("detail").style.display = "block";
-  }
+  if (showDrawer) openPointChartDetail(p);
 });
 canvas.addEventListener("pointercancel", function(){
   brushing = null;
@@ -2415,7 +2633,7 @@ canvas.addEventListener("pointercancel", function(){
 });
 canvas.addEventListener("mouseleave", function(){ tip.style.display = "none"; });
 canvas.addEventListener("dblclick", function(){
-  $("detail").style.display = "none";   // first click of the pair may have opened it
+  closeChartDetail();   // first click of the pair may have opened it
   resetZoom();
 });
 window.addEventListener("keydown", function(ev){
@@ -2426,6 +2644,7 @@ window.addEventListener("keydown", function(ev){
       return;
     }
     if (brushing){ brushing = null; drawBrush(); return; }  // cancel in-progress brush first
+    if ($("detail").style.display === "block"){ closeChartDetail(); return; }
     if ($("eventIndexPanel").style.display === "flex"){ closeEventIndex(); return; }
     if ($("eventsPanel").style.display === "flex"){ closeEvents(); return; }
     var hp = $("helpPanel");
@@ -2437,39 +2656,613 @@ window.addEventListener("keydown", function(ev){
   }
 });
 
-function redrawFromPoints(){
-  points = applyFilters();
+function redrawFromPoints(allowPartial){
+  var filtered=applyFilters();
+  scatterOmittedMessages=0;
+  if(activeView==="scatter"){
+    var axes=filterScatterMessageCoordinates(filtered,$("selX").value,$("selY").value);
+    points=axes.points;scatterOmittedMessages=axes.omitted;
+  }else points=filtered;
   computeRanges();
   ensureColors();
-  if (activeView === "messages") renderMessageBubbles();
-  else draw();
+  if (activeView === "messages"){
+    if (!messageOpening) renderMessageBubbles();
+  }
+  else draw(allowPartial);
+}
+
+function chartValidRevision(value){ return Number.isSafeInteger(value) && value >= 0; }
+function chartIndexRows(rows){
+  if (!Array.isArray(rows)) throw Error("Invalid chart rows");
+  var index = new Map();
+  rows.forEach(function(row){
+    if (!row || typeof row.id !== "string" || !row.id || !chartValidRevision(row.version) ||
+        !chartValidRevision(row.order) || index.has(row.id)) throw Error("Invalid chart row identity");
+    index.set(row.id, row);
+  });
+  return index;
+}
+function chartSortedRows(index){
+  return Array.from(index.values()).sort(function(a,b){ return a.order - b.order; });
+}
+function chartSnapshot(body){
+  if (!body || body.schema !== 1 || typeof body.epoch !== "string" || !body.epoch ||
+      !chartValidRevision(body.revision)) throw Error("Invalid chart snapshot");
+  var entries = chartIndexRows(body.entries), raw = chartIndexRows(body.raw);
+  raw.forEach(function(row,id){ if (entries.has(id)) throw Error("Duplicate chart row"); });
+  return {epoch:body.epoch,revision:body.revision,entries:entries,raw:raw,
+    data:Object.assign({},body,{entries:chartSortedRows(entries),raw:chartSortedRows(raw)})};
+}
+function chartApplyChanges(state, body){
+  if (!body || body.schema !== 1 || body.epoch !== state.epoch || body.base !== state.revision ||
+      !chartValidRevision(body.revision) || body.revision < body.base || !Array.isArray(body.changes) ||
+      body.revision === body.base && body.changes.length) throw Error("Chart revision changed");
+  if (body.revision === body.base) return state;
+  var next = {epoch:state.epoch,revision:body.revision,entries:state.entries,raw:state.raw,
+    data:Object.assign({},state.data,{revision:body.revision})};
+  var seen = new Set();
+  body.changes.forEach(function(layer){
+    var name = layer && layer.layer;
+    if (name !== "entries" && name !== "raw" || seen.has(name) ||
+        !Array.isArray(layer.deletes)) throw Error("Invalid chart changes");
+    seen.add(name);
+    var rows = new Map(state[name]), updates = chartIndexRows(layer.upserts);
+    layer.deletes.forEach(function(id){
+      if (typeof id !== "string") throw Error("Invalid chart deletion");
+      rows.delete(id);
+    });
+    updates.forEach(function(row,id){ rows.set(id,row); });
+    next[name] = rows;
+    next.data[name] = chartSortedRows(rows);
+  });
+  seen.forEach(function(name){
+    var other = name === "entries" ? next.raw : next.entries;
+    next[name].forEach(function(row,id){ if (other.has(id)) throw Error("Duplicate chart row"); });
+  });
+  ["meta","sources","recovery","generated"].forEach(function(key){
+    if (Object.prototype.hasOwnProperty.call(body,key)) next.data[key] = body[key];
+  });
+  return next;
+}
+async function chartJson(path, payload){
+  var options = {cache:"no-store",credentials:"same-origin"};
+  if (payload){
+    options.method = "POST"; options.headers = {"Content-Type":"application/json"};
+    options.body = JSON.stringify(payload);
+  }
+  var response = await fetch(path,options);
+  if (!response.ok){
+    var error = Error("HTTP " + response.status);
+    error.status = response.status;
+    throw error;
+  }
+  return response.json();
+}
+var chartSearch = null;
+function getChartSearch(query){
+  if (!chartState || !query){ chartSearch = null; return null; }
+  var epoch = chartState.epoch, revision = chartState.revision;
+  if (chartSearch && chartSearch.query === query && chartSearch.epoch === epoch && chartSearch.revision === revision) return chartSearch;
+  var search = chartSearch = {query:query,epoch:epoch,revision:revision};
+  function update(){
+    if (chartSearch === search && activeView === "messages" && $("msgSearch").value.trim() === query &&
+        chartState && chartState.epoch === epoch && chartState.revision === revision) renderMessageBubbles();
+  }
+  chartJson("/api/chart/search",{schema:1,epoch:epoch,revision:revision,q:query}).then(function(body){
+    if (body.schema !== 1 || body.epoch !== epoch || body.revision !== revision || !body.matches) throw Error("Search revision changed");
+    var matches = {};
+    ["pattern","variables","variable_values","candidates"].forEach(function(key){
+      if (!Array.isArray(body.matches[key])) throw Error("Invalid chart search");
+      matches[key] = new Set(body.matches[key]);
+    });
+    search.matches = matches;
+    update();
+  }).catch(function(){ search.error = true; update(); });
+  return search;
+}
+
+function chartSetNotice(text){
+  var notice = $("chartNotice");
+  if (!notice){
+    notice = document.createElement("div");
+    notice.id = "chartNotice";
+    notice.setAttribute("role","status");
+    wrap.appendChild(notice);
+  }
+  notice.textContent = text;
+  notice.hidden = !text;
+}
+
+var CHART_CACHE_DB = "omada-chart-cache-v1", CHART_CACHE_MAX_BYTES = 2560 * 1024;
+var CHART_CACHE_MAX_MARKS = 30000, CHART_CACHE_MAX_AGE = 24 * 60 * 60 * 1000;
+var chartCachePromise = null, chartCacheTimer = null, chartCacheDisabled = false;
+var chartCacheWriteQueue = Promise.resolve(), chartCacheGeneration = 0;
+function chartCacheSerial(work){
+  var result=chartCacheWriteQueue.then(work,work);
+  chartCacheWriteQueue=result.catch(function(){});
+  return result;
+}
+function chartCacheSupported(){
+  try {
+    var host = location.hostname;
+    return !chartCacheDisabled && (host === "localhost" || host === "[::1]" || /^127(?:\.\d{1,3}){3}$/.test(host)) &&
+      !!window.indexedDB && !!window.crypto && !!window.crypto.subtle && typeof createImageBitmap === "function" &&
+      typeof canvas.toBlob === "function";
+  } catch (error){ return false; }
+}
+function chartCacheDb(){
+  if (!chartCachePromise) chartCachePromise = new Promise(function(resolve,reject){
+    var request = window.indexedDB.open(CHART_CACHE_DB,1);
+    request.onupgradeneeded = function(){ request.result.createObjectStore("frame"); };
+    request.onerror = request.onblocked = function(){ reject(Error("Chart cache unavailable")); };
+    request.onsuccess = function(){ resolve(request.result); };
+  });
+  return chartCachePromise;
+}
+var chartFilterControls = ["fSrc","fSrcNot","fDst","fDstNot","fPortIn","fPortNot","fType","fDs",
+  "fMin","fFrom","fTo","fCap","chkDirInt","chkDirOut","chkDirIn","chkDirOth"];
+function chartControlValues(ids){
+  return ids.map(function(id){
+    var el = $(id);
+    return [el.value,!!el.checked,!!(el.validity && el.validity.badInput)];
+  });
+}
+function chartCacheView(){
+  var controls = chartControlValues(["selX","selY","selYS","chkFlipY","selC","selS"].concat(chartFilterControls));
+  return JSON.stringify([controls,zoomX,zoomY,legendDrill,related,showLegend,activeView,
+    wrap.clientWidth,wrap.clientHeight,canvas.width,canvas.height,dpr,navigator.language,
+    Intl.DateTimeFormat().resolvedOptions().timeZone]);
+}
+async function chartCacheKey(view){
+  var bytes = await window.crypto.subtle.digest("SHA-256",new TextEncoder().encode(view));
+  return Array.from(new Uint8Array(bytes),function(byte){ return byte.toString(16).padStart(2,"0"); }).join("");
+}
+async function chartCacheRead(slot){
+  var db = await chartCacheDb();
+  return new Promise(function(resolve,reject){
+    var tx = db.transaction("frame","readwrite"), store = tx.objectStore("frame");
+    var key = slot || "last", request = store.get(key), record;
+    tx.onerror = tx.onabort = function(){ reject(Error("Could not read chart cache")); };
+    tx.oncomplete = function(){ resolve(record); };
+    request.onsuccess = function(){
+      record = request.result;
+      if (record && (record.savedAt < Date.now() - CHART_CACHE_MAX_AGE || record.savedAt > Date.now())){
+        store.delete(key); record = null;
+      }
+    };
+  });
+}
+function chartCacheWrite(record,slot){
+  return chartCacheSerial(async function(){
+    var db = await chartCacheDb();
+    return new Promise(function(resolve,reject){
+      var tx = db.transaction("frame","readwrite"), store = tx.objectStore("frame");
+      var key = slot || "last", request = store.get(key);
+      tx.onerror = tx.onabort = function(){ reject(Error("Could not save chart cache")); };
+      tx.oncomplete = function(){ resolve(); };
+      request.onsuccess = function(){
+        if (!request.result || request.result.savedAt <= record.savedAt) store.put(record,key);
+      };
+    });
+  });
+}
+function chartCacheIdentity(mark){
+  return [mark.p.ref.id,mark.p.ref.version,mark.p.ordinal,mark.x,mark.y];
+}
+function chartCacheRecordValid(record,key,width,height,kind){
+  if (!record || record.key !== key || record.access !== "loopback" || record.width !== width || record.height !== height ||
+      (record.kind || "scatter") !== (kind || "scatter") ||
+      (kind === "messages" && record.labelSchema !== 1) ||
+      typeof record.epoch !== "string" || !chartValidRevision(record.revision) || !Number.isFinite(record.savedAt) ||
+      record.savedAt < Date.now() - CHART_CACHE_MAX_AGE || record.savedAt > Date.now() ||
+      !record.image || record.image.type !== "image/png" || record.image.size > CHART_CACHE_MAX_BYTES ||
+      !Array.isArray(record.hits) || record.hits.length > CHART_CACHE_MAX_MARKS) return false;
+  return record.hits.every(function(hit){
+    return Array.isArray(hit) && hit.length === (kind === "messages" ? 6 : 5) && typeof hit[0] === "string" && hit[0].length <= 128 &&
+      chartValidRevision(hit[1]) && chartValidRevision(hit[2]) &&
+      Number.isFinite(hit[3]) && Number.isFinite(hit[4]) &&
+      (kind !== "messages" || Number.isFinite(hit[5]) && hit[5] > 0);
+  });
+}
+async function restoreCachedChart(){
+  if (!chartCacheSupported() || activeView !== "scatter") return;
+  var frame = chartFrame, view = chartCacheView();
+  try {
+    var pair = await Promise.all([chartCacheRead(),chartCacheKey(view)]), record = pair[0];
+    if (chartDataReady || frame !== chartFrame || view !== chartCacheView() || !canvasSynced() ||
+        !chartCacheRecordValid(record,pair[1],canvas.width,canvas.height)) return;
+    var image = await createImageBitmap(record.image);
+    try {
+      if (chartDataReady || frame !== chartFrame || view !== chartCacheView() || !canvasSynced() ||
+          image.width !== canvas.width || image.height !== canvas.height) return;
+      ctx.save();
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(image,0,0);
+      ctx.restore();
+      chartStaleImage = true;
+      // The raster and handles describe a past revision. Live hit geometry is
+      // installed together with its repaint after the server reply.
+      hitGrid = null; legendHits = []; lastPlot = lastScaleX = lastScaleY = null;
+      chartSetNotice(chartLoadFailed ? "Cached chart · live update failed" : "Cached chart · checking live data");
+    } finally { image.close(); }
+  } catch (error){ chartCacheDisabled = true; }
+}
+function discardCachedChart(){
+  if (!chartStaleImage) return;
+  chartStaleImage = false;
+  ctx.clearRect(0,0,canvas.width/dpr,canvas.height/dpr);
+  chartSetNotice(fetching ? "Loading live chart…" : "");
+}
+function chartCanCache(){
+  return chartCacheSupported() && chartState && chartState.data.detail_available && !document.hidden &&
+    data.sources && data.sources.condensed && data.sources.condensed.available &&
+    data.sources.raw && data.sources.raw.available;
+}
+function scatterCanCache(){
+  return chartCanCache() && activeView === "scatter" && chartPaint && drawn.length &&
+    drawn.length <= CHART_CACHE_MAX_MARKS && canvas.width * canvas.height <= 7000000;
+}
+function scheduleChartCache(){
+  if (!scatterCanCache()) return;
+  clearTimeout(chartCacheTimer);
+  chartCacheTimer = setTimeout(saveCachedChart,500);
+}
+async function saveCachedChart(){
+  var state = chartState, paint = chartPaint, frame = chartFrame, generation=chartCacheGeneration, view = chartCacheView();
+  if (!scatterCanCache() || !canvasSynced()) return;
+  var hits = drawn.map(chartCacheIdentity), savedAt = Date.now(), width = canvas.width, height = canvas.height;
+  try {
+    var pair = await Promise.all([new Promise(function(resolve){ canvas.toBlob(resolve,"image/png"); }),chartCacheKey(view)]);
+    var image = pair[0];
+    if (!image || image.size + JSON.stringify(hits).length * 2 > CHART_CACHE_MAX_BYTES ||
+        state !== chartState || frame !== chartFrame || generation!==chartCacheGeneration || view !== chartCacheView() || !canvasSynced()) return;
+    await chartCacheWrite({image:image,key:pair[1],access:"loopback",epoch:state.epoch,revision:state.revision,
+      width:width,height:height,savedAt:savedAt,hits:hits});
+  } catch (error){ chartCacheDisabled = true; }
+}
+
+var messageOpening = null, messagePreview = null, messageCacheTimer = null, messageFrame = 0;
+function sizeMessagePlot(){
+  var height = Math.max(300,Math.min(560,window.innerHeight-300));
+  $("messageBubbles").style.height = height + "px";
+  return height;
+}
+function messageCacheView(){
+  var host = $("messageBubbles");
+  return JSON.stringify([chartControlValues(chartFilterControls),legendDrill,activeView,messagePresentation,messagePage,
+    $("msgSearch").value.trim(),$("msgSeverity").value,$("msgXAxis").value||"timestamp",$("msgYAxis").value||"activity",host.clientWidth,host.clientHeight,
+    window.devicePixelRatio || 1,navigator.language,Intl.DateTimeFormat().resolvedOptions().timeZone]);
+}
+async function clearChartCache(){
+  try {
+    chartCacheGeneration++;
+    clearTimeout(chartCacheTimer);clearTimeout(messageCacheTimer);chartCacheTimer=messageCacheTimer=null;
+    chartFrame++;chartPaint=null;cancelMessagePreview();
+    if(chartStaleImage)discardCachedChart();
+    await chartCacheSerial(async function(){
+      var db=await chartCacheDb();
+      await new Promise(function(resolve,reject){var tx=db.transaction("frame","readwrite"),store=tx.objectStore("frame");store.delete("last");store.delete("messages");tx.oncomplete=resolve;tx.onerror=tx.onabort=function(){reject(Error("Could not clear saved previews"));};});
+    });
+    $("messageCoverage").textContent="Saved chart previews cleared from this browser profile.";
+  } catch(error){ chartCacheGeneration++;chartCacheDisabled=true;$("messageCoverage").textContent="Saved chart previews could not be cleared."; }
+}
+function cancelMessagePreview(){
+  messageFrame++;
+  if (messageOpening){ clearTimeout(messageOpening.timer); messageOpening = null; }
+  if (messagePreview){ messagePreview.image.remove(); messagePreview = null; }
+}
+function openMessageChart(){
+  if (!chartCacheSupported() || messagePresentation !== "bubbles" || chartState && !chartState.data.detail_available){
+    renderMessageBubbles(); return;
+  }
+  var host = $("messageBubbles");
+  host.style.display = "block";
+  host.textContent = "";
+  ["messageRanked","messageTime","messageSizeLegend","messageActivityLegend","messagePageStatus"].forEach(function(id){
+    $(id).textContent = "";
+  });
+  $("msgPrev").disabled = $("msgNext").disabled = true;
+  $("messageCoverage").textContent = "Loading live message bubbles…";
+  sizeMessagePlot();
+  var opening = messageOpening = {view:messageCacheView()};
+  function finish(){
+    if (messageOpening !== opening) return;
+    clearTimeout(opening.timer);
+    messageOpening = null;
+    if (chartDataReady) renderMessageBubbles();
+  }
+  opening.timer = setTimeout(function(){ if(chartDataReady) finish(); },120);
+  restoreCachedMessage(opening).then(function(painted){
+    if (!painted || !chartDataReady){ finish(); return; }
+    // Give the saved raster a paint before starting a potentially expensive pack.
+    window.requestAnimationFrame(function(){ window.requestAnimationFrame(finish); });
+  });
+}
+async function restoreCachedMessage(opening){
+  var host = $("messageBubbles"), width = host.clientWidth, height = host.clientHeight, ratio = window.devicePixelRatio || 1;
+  var pixelWidth = Math.round(width*ratio), pixelHeight = Math.round(height*ratio);
+  function current(){
+    return messageOpening === opening && opening.view === messageCacheView() &&
+      (!chartState || chartState.data.detail_available);
+  }
+  try {
+    var pair = await Promise.all([chartCacheRead("messages"),chartCacheKey(opening.view)]), record = pair[0];
+    if (!current() || !chartCacheRecordValid(record,pair[1],pixelWidth,pixelHeight,"messages")) return false;
+    var bitmap = await createImageBitmap(record.image);
+    try {
+      if (!current() || bitmap.width !== pixelWidth || bitmap.height !== pixelHeight) return false;
+      var image = document.createElement("canvas");
+      image.width = pixelWidth; image.height = pixelHeight;
+      image.style.width = width + "px"; image.style.height = height + "px";
+      image.className = "cachedMessageBubbles";
+      image.setAttribute("aria-hidden","true");
+      image.getContext("2d").drawImage(bitmap,0,0);
+      host.appendChild(image);
+      messagePreview = {image:image,view:opening.view};
+      $("messageCoverage").textContent = chartLoadFailed ? "Cached message bubbles · live update failed." :
+        "Cached message bubbles · updating from live data…";
+      return true;
+    } finally { bitmap.close(); }
+  } catch (error){ chartCacheDisabled = true; return false; }
+}
+function messageCacheMark(point, group){
+  var ref = point.item.records[0];
+  return {hit:[ref.id,ref.version,0,point.x+8,point.y,point.r],label:messageBubbleLabel(point.item,group),
+    color:messageActivityColor(point.item.activityId)};
+}
+function paintCachedMessage(target,marks,ratio){
+  var context = target.getContext("2d");
+  context.scale(ratio,ratio);
+  marks.forEach(function(mark){
+    var x = mark.hit[3], y = mark.hit[4], r = mark.hit[5];
+    context.shadowColor = "rgba(0,0,0,.35)";
+    context.shadowBlur = 5 * ratio;
+    context.shadowOffsetY = 2 * ratio;
+    context.beginPath(); context.arc(x,y,Math.max(0,r-.5),0,Math.PI*2);
+    context.fillStyle = mark.color; context.fill();
+    context.shadowColor = "transparent";
+    context.lineWidth = 1; context.strokeStyle = "rgba(255,255,255,.58)"; context.stroke();
+    if (r >= 4){
+      context.save(); context.clip();
+      context.fillStyle = "#fff"; context.font = "700 " + Math.max(6,Math.min(10,r*.7)) + "px system-ui";
+      context.textAlign = "center"; context.textBaseline = "middle";
+      context.shadowColor = "#000"; context.shadowBlur = 3 * ratio; context.shadowOffsetY = ratio;
+      context.fillText(mark.label,x,y,Math.max(0,r*1.7));
+      context.restore();
+    }
+  });
+}
+function scheduleMessageCache(layout,groups){
+  if (!chartCanCache() || activeView !== "messages" || messagePresentation !== "bubbles" || !layout.length) return;
+  var host = $("messageBubbles"), ratio = window.devicePixelRatio || 1;
+  var width = Math.round(host.clientWidth*ratio), height = Math.round(host.clientHeight*ratio);
+  if (width <= 0 || height <= 0 || width*height > 7000000) return;
+  var frame = messageFrame, state = chartState, view = messageCacheView();
+  var marks = layout.map(function(point){ return messageCacheMark(point,groups[point.item.variantKey]); });
+  clearTimeout(messageCacheTimer);
+  messageCacheTimer = setTimeout(function(){ saveCachedMessage(frame,state,view,width,height,ratio,marks); },500);
+}
+async function saveCachedMessage(frame,state,view,width,height,ratio,marks){
+  var generation=chartCacheGeneration;
+  function current(){
+    return chartCanCache() && state === chartState && frame === messageFrame && generation===chartCacheGeneration && view === messageCacheView();
+  }
+  if (!current()) return;
+  try {
+    var target = document.createElement("canvas"), savedAt = Date.now();
+    target.width = width; target.height = height;
+    paintCachedMessage(target,marks,ratio);
+    var pair = await Promise.all([new Promise(function(resolve){ target.toBlob(resolve,"image/png"); }),chartCacheKey(view)]);
+    var image = pair[0], hits = marks.map(function(mark){ return mark.hit; });
+    if (!image || image.size + JSON.stringify(hits).length * 2 > CHART_CACHE_MAX_BYTES || !current()) return;
+    await chartCacheWrite({kind:"messages",labelSchema:1,image:image,key:pair[1],access:"loopback",epoch:state.epoch,
+      revision:state.revision,width:width,height:height,savedAt:savedAt,hits:hits},"messages");
+  } catch (error){ chartCacheDisabled = true; }
+}
+
+function closeChartDetail(){
+  chartDetailRequest++;
+  $("detail").style.display = "none";
+  $("detailBody").textContent = "";
+  $("chartDetailPages").textContent = "";
+}
+function beginChartDetail(title){
+  closeChartDetail();
+  var panel = $("detail");
+  panel.querySelector("h3").textContent = title;
+  panel.style.display = "block";
+  panel.querySelector("button").focus();
+  return chartDetailRequest;
+}
+function chartCurrentDetail(token, epoch){
+  return token === chartDetailRequest && chartState && chartState.epoch === epoch &&
+    $("detail").style.display === "block";
+}
+function chartHasRow(row){
+  var current = chartState && (chartState.entries.get(row.id) || chartState.raw.get(row.id));
+  return !!current && current.version === row.version;
+}
+function chartDetailError(error){
+  if (error.status === 403) return "Full record details are restricted to local connections.";
+  if (error.status === 404 || error.status === 409) return "This record changed or left the retained chart. Refresh the view and select it again.";
+  return "Record details could not be loaded. Select the mark to try again.";
+}
+function chartDetailsAvailable(){
+  return chartState.data.detail_available || chartState.data.redacted_detail_available;
+}
+async function openPointChartDetail(p){
+  var token = beginChartDetail(p.ds === "tally" ? "Condensed entry" : "Raw event");
+  if (!chartState){ $("detailBody").textContent = JSON.stringify(p.ref,null,2); return; }
+  if (!chartDetailsAvailable()){
+    $("detailBody").textContent = "Full record details are restricted to local connections.";
+    return;
+  }
+  var epoch = chartState.epoch, row = p.ref;
+  $("detailBody").textContent = "Loading record…";
+  try {
+    var body = await chartJson("/api/chart/detail?epoch=" + encodeURIComponent(epoch) +
+      "&id=" + encodeURIComponent(row.id) + "&version=" + row.version);
+    if (!chartCurrentDetail(token,epoch)) return;
+    if (body.schema !== 1 || body.epoch !== epoch || body.id !== row.id || body.version !== row.version ||
+        !body.record || !chartHasRow(row)) throw Object.assign(Error("Record changed"),{status:409});
+    $("detailBody").textContent = JSON.stringify(body.record,null,2);
+  } catch (error){
+    if (chartCurrentDetail(token,epoch)) $("detailBody").textContent = chartDetailError(error);
+  }
+}
+var CHART_DETAIL_PAGE = 25;
+function chartDetailNavigation(page, total, load){
+  var host = $("chartDetailPages");
+  host.textContent = "";
+  var pageCount = Math.ceil(total / CHART_DETAIL_PAGE);
+  if (pageCount <= 1) return;
+  function button(label, target, disabled){
+    var button = document.createElement("button");
+    button.type = "button";
+    button.style.position = "static";
+    button.textContent = label; button.disabled = disabled;
+    button.addEventListener("click",function(){ load(target); });
+    host.appendChild(button);
+  }
+  button("Previous",page - 1,page === 0);
+  host.appendChild(document.createTextNode(" Page " + (page + 1) + " of " + pageCount + " "));
+  button("Next",page + 1,page + 1 >= pageCount);
+}
+function openMessageChartDetail(g, shownCount, severity, grouped, useTally, rawRedacted){
+  var token = beginChartDetail(useTally ? "Message aggregate details" : "Raw message details");
+  if (!chartDetailsAvailable()){
+    $("detailBody").textContent = "Full record details are restricted to local connections.";
+    return;
+  }
+  var epoch = chartState.epoch, supplements = grouped.activityRawRecords[g.activity.id] || [];
+  var selected = g.records, total = selected.length + supplements.length;
+  function load(page){
+    if (!chartCurrentDetail(token,epoch)) return;
+    var pageToken = ++chartDetailRequest;
+    token = pageToken;
+    loadMessageChartPage(g,shownCount,severity,useTally,rawRedacted,epoch,selected,supplements,page,total,pageToken,load);
+  }
+  load(0);
+}
+async function fetchChartDetailRows(epoch,refs,token){
+  if (!chartCurrentDetail(token,epoch)) return [];
+  try {
+    var body = await chartJson("/api/chart/details",{schema:1,epoch:epoch,refs:refs});
+    if (body.schema !== 1 || body.epoch !== epoch || !Array.isArray(body.results)) throw Error("Invalid detail response");
+    return body.results;
+  } catch (error){
+    if (error.status !== 413) throw error;
+    if (refs.length <= 1) return [];
+    var midpoint = Math.ceil(refs.length / 2);
+    var first = await fetchChartDetailRows(epoch,refs.slice(0,midpoint),token);
+    return first.concat(await fetchChartDetailRows(epoch,refs.slice(midpoint),token));
+  }
+}
+async function loadMessageChartPage(g,shownCount,severity,useTally,rawRedacted,epoch,selected,supplements,page,total,token,load){
+  chartDetailNavigation(page,total,load);
+  $("detailBody").textContent = "Loading records…";
+  var start = page * CHART_DETAIL_PAGE, end = start + CHART_DETAIL_PAGE;
+  var rows = selected.slice(start,end).concat(supplements.slice(Math.max(0,start-selected.length),Math.max(0,end-selected.length)));
+  var refs = rows.map(function(row){ return {id:row.id,version:row.version}; });
+  try {
+    var results = await fetchChartDetailRows(epoch,refs,token);
+    if (!chartCurrentDetail(token,epoch)) return;
+    var found = new Map(results.map(function(result){ return [result.id,result]; }));
+    var selectedPoints = [], supplementPoints = [], fullRecords = [], rawRecords = [], unavailable = 0;
+    rows.forEach(function(row,i){
+      var result = found.get(row.id);
+      if (!result || !result.record || result.version !== row.version || !chartHasRow(row)){ unavailable++; return; }
+      var isSupplement = i + start >= selected.length;
+      var full = result.record;
+      (isSupplement ? rawRecords : fullRecords).push(full);
+      var ref = Object.assign({},full,{id:row.id,pattern_id:row.pattern_id});
+      (isSupplement ? supplementPoints : selectedPoints).push({type:"msg",ds:useTally && !isSupplement ? "tally" : "raw",ref:ref});
+    });
+    var expanded = buildMessageGroups(selectedPoints,useTally,supplementPoints);
+    var pageGroup = expanded.groups[g.key];
+    var detail = messageDetailData(Object.assign({},g,pageGroup || {},{count:g.count,severity:g.severity,records:fullRecords}),
+      shownCount,severity,expanded,useTally,rawRedacted);
+    detail.record_page = {first:start + 1,last:Math.min(end,total),total:total,unavailable:unavailable};
+    detail.detail_note += " Details and observed values cover the records on this page.";
+    if (chartState.data.redacted_detail_available) detail.detail_note += " The server redacts private fields for remote clients.";
+    if (useTally) detail.recent_raw_records_for_activity = rawRecords;
+    $("detailBody").textContent = JSON.stringify(detail,null,2);
+  } catch (error){
+    if (chartCurrentDetail(token,epoch)) $("detailBody").textContent = chartDetailError(error);
+  }
 }
 
 var fetching = false;
-function refresh(fitAxes){
+var chartLegacy = false, chartLegacyCapacity = false, chartRefitQueued = false;
+async function refresh(fitAxes){
+  chartRefitQueued = chartRefitQueued || !!fitAxes;
   if (fetching) return;
   fetching = true;
-  fetch("/api/data").then(function(r){ return r.json(); }).then(function(j){
-    fetching = false;
-    data = j;
+  if (!chartDataReady && !chartStaleImage) chartSetNotice("Loading live chart…");
+  try {
+    var previous = chartState, next = null, nextData, snapshotLoaded = false;
+    if (!chartLegacy){
+      if (previous){
+        try {
+          var changes = await chartJson("/api/chart/changes?epoch=" + encodeURIComponent(previous.epoch) + "&since=" + previous.revision);
+          try { next = chartApplyChanges(previous,changes); } catch (error) { next = null; }
+        } catch (error){
+          if (error.status !== 409 && error.status !== 404 && error.status !== 501) throw error;
+          if (error.status === 501) chartLegacy = chartLegacyCapacity = true;
+        }
+      }
+      if (!next && !chartLegacy){
+        try {
+          next = chartSnapshot(await chartJson("/api/chart/snapshot"));
+          snapshotLoaded = true;
+        }
+        catch (error){
+          if (error.status !== 404 && error.status !== 501) throw error;
+          chartLegacy = true;
+          chartLegacyCapacity = error.status === 501;
+        }
+      }
+    }
+    nextData = next ? next.data : await chartJson("/api/data");
+    var refit = chartRefitQueued;
+    chartRefitQueued = false;
+    chartLoadFailed = false;
+    chartSetNotice(chartLegacyCapacity ? "Full-data mode · compact feed unavailable" : "");
+    if (next && next === previous && !refit) return;
+    var repaint = data.entries !== nextData.entries || data.raw !== nextData.raw;
+    var replaced = previous && (snapshotLoaded || !next || previous.epoch !== next.epoch);
+    chartState = next;
+    chartDataReady = true;
+    chartStaleImage = false;
+    if (replaced){ closeChartDetail(); chartSearch = null; related = null; }
+    data = nextData;
     updateSourceStatus();
     updateRecoveryStatus();
-    allPoints = buildAllPoints();
-    if (fitAxes) clearFitCaches();   // explicit refresh: re-fit; auto: keep ranges stable
-    redrawFromPoints();
-    tip.style.display = "none";      // data moved under the cursor
-  }).catch(function(e){
+    if (repaint) allPoints = buildAllPoints();
+    if (refit || replaced){ clearFitCaches(); chartSearch = null; }
+    if (repaint || refit || replaced || activeView === "messages"){
+      redrawFromPoints(!!previous && next && !replaced && !refit);
+      tip.style.display = "none";
+    }
+  } catch (error){
+    chartRefitQueued = false;
+    chartLoadFailed = true;
+    chartSetNotice(chartStaleImage ? "Cached chart · live update failed" :
+      (chartDataReady ? "Live update failed · showing last received data" : "Chart data could not be loaded"));
+    if (!chartDataReady && activeView === "messages") $("messageCoverage").textContent = messagePreview ?
+      "Cached message bubbles · live update failed." : "Message data could not be loaded.";
+  } finally {
     fetching = false;
-    $("status").textContent = "load failed: " + e;
-    if (activeView === "messages") $("messageCoverage").textContent = "Message data could not be loaded. " + e;
-  });
+  }
 }
 
-function controlChange(){ clearFitCaches(); zoomX = zoomY = null; redrawFromPoints(); }
-function filterChange(){ clearFitCaches(); colorRank = {}; redrawFromPoints(); }
+function controlChange(){ closeChartDetail(); cancelMessagePreview(); clearFitCaches(); zoomX = zoomY = null; redrawFromPoints(); }
+function filterChange(){ closeChartDetail(); cancelMessagePreview(); clearFitCaches(); colorRank = {}; redrawFromPoints(); }
 var deb = null;
 ["fSrc", "fDst", "fSrcNot", "fDstNot", "fPortIn", "fPortNot", "fCap"].forEach(function(id){
   $(id).addEventListener("input", function(){
+    if (messageOpening || messagePreview) cancelMessagePreview();
     clearTimeout(deb);
     deb = setTimeout(filterChange, 350);
   });
@@ -2480,17 +3273,32 @@ var deb = null;
 ["selX", "selY", "selC", "selS", "selYS", "chkFlipY"].forEach(function(id){
   $(id).addEventListener("change", controlChange);
 });
-$("msgSearch").addEventListener("input", function(){ messagePage = 0; renderMessageBubbles(); });
-$("msgSeverity").addEventListener("change", function(){ messagePage = 0; renderMessageBubbles(); });
-$("msgPrev").addEventListener("click", function(){ messagePage = Math.max(0, messagePage - 1); renderMessageBubbles(); });
-$("msgNext").addEventListener("click", function(){ messagePage++; renderMessageBubbles(); });
+var msgSearchDebounce;
+$("msgSearch").addEventListener("input", function(){
+  closeChartDetail(); cancelMessagePreview(); messagePage = 0; clearTimeout(msgSearchDebounce);
+  ["messageBubbles","messageRanked","messageTime"].forEach(function(id){ $(id).textContent = ""; });
+  closeMessageHover();
+  msgSearchDebounce = setTimeout(function(){ if (activeView === "messages") renderMessageBubbles(); },200);
+});
+$("msgSeverity").addEventListener("change", function(){ closeChartDetail(); messagePage = 0; renderMessageBubbles(); });
+$("msgPrev").addEventListener("click", function(){ closeChartDetail(); messagePage = Math.max(0, messagePage - 1); renderMessageBubbles(); });
+$("msgNext").addEventListener("click", function(){ closeChartDetail(); messagePage++; renderMessageBubbles(); });
+[$("msgXAxis"),$("msgYAxis")].forEach(function(axis){axis.addEventListener("change",function(){closeChartDetail();cancelMessagePreview();messagePage=0;renderMessageBubbles();});});
+$("clearChartCache").addEventListener("click",clearChartCache);
 $("messageHoverDetails").addEventListener("mouseleave", function(){
   var panel=this,owner=messageHoverOwner; setTimeout(function(){if(messageHoverOwner===owner&&!panel.matches(":hover")&&!panel.contains(document.activeElement)&&!(owner&&owner.matches(":hover"))&&!(owner&&owner.matches(":focus")))closeMessageHover();},350);
 });
-window.addEventListener("resize", function(){ if (activeView === "scatter") fit(); else renderMessageBubbles(); });
+window.addEventListener("resize", function(){
+  if(activeView==="scatter")fit();
+  else if(chartDataReady)renderMessageBubbles();
+  else {cancelMessagePreview();openMessageChart();}
+});
 setInterval(function(){
   if ($("chkAuto").checked && !document.hidden) refresh(false);
 }, 30000);
+document.addEventListener("visibilitychange",function(){
+  if (!document.hidden && $("chkAuto").checked) refresh(false);
+});
 
 function dismissSupport(){
   try { localStorage.setItem("omada_support_ok", "1"); } catch (e) {}
@@ -2532,6 +3340,7 @@ try {
 })();
 
 fit();
+restoreCachedChart();
 refresh(true);
 </script>
 </body>

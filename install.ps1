@@ -297,6 +297,7 @@ function Test-InstallerPayload([string]$Root) {
         'watchdog.ps1',
         'watchdog-health.ps1',
         'omada_viz.py',
+        'omada_chart_cache.py',
         'viz.html',
         'viz.ps1'
     )
